@@ -64,7 +64,11 @@ fun Gallery(directory: File, changeDirectory: (File) -> Unit) {
                     Icon(painter = rememberVectorPainter(Icons.Default.ArrowBack), contentDescription = null)
                 }
             }
-            Text(text = "Галерея ${currentDirectory.value}", modifier = Modifier.padding(16.dp).weight(1f))
+            val currentName = when (viewType.value) {
+                GalleryViewType.ALL -> directory
+                GalleryViewType.FOLDERS -> currentDirectory.value
+            }
+            Text(text = "Галерея $currentName", modifier = Modifier.padding(16.dp).weight(1f))
             IconButton(onClick = {
                 viewType.value = GalleryViewType.values().let { it[(viewType.value.ordinal + 1) % it.size] }
             }) {
