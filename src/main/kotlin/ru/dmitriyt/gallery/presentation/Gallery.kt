@@ -9,6 +9,7 @@ import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.GridCells
+import androidx.compose.foundation.lazy.GridItemSpan
 import androidx.compose.foundation.lazy.LazyVerticalGrid
 import androidx.compose.material.CircularProgressIndicator
 import androidx.compose.material.Icon
@@ -42,6 +43,7 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import org.imgscalr.Scalr
 import ru.dmitriyt.gallery.data.GalleryCacheStorage
+import ru.dmitriyt.gallery.data.model.GalleryItem
 import ru.dmitriyt.gallery.data.model.GalleryViewType
 import ru.dmitriyt.gallery.data.model.LoadingState
 import ru.dmitriyt.gallery.presentation.util.ImageInformation
@@ -49,23 +51,24 @@ import ru.dmitriyt.gallery.presentation.util.ImageUtil
 import java.io.File
 import java.nio.file.Files
 import java.nio.file.attribute.BasicFileAttributes
+import java.text.SimpleDateFormat
+import java.util.Calendar
+import java.util.Locale
 import javax.imageio.ImageIO
 import kotlin.coroutines.resume
 import kotlin.coroutines.suspendCoroutine
-
-private val galleryCache = mutableMapOf<String, ImageBitmap>()
 
 @Composable
 fun Gallery(directory: File, changeDirectory: (File) -> Unit) {
     val viewType = remember { mutableStateOf(GalleryViewType.FOLDERS) }
     val currentDirectory = remember { mutableStateOf(directory) }
-    val stateListFiles: MutableState<LoadingState<List<File>>> = remember { mutableStateOf(LoadingState.Loading()) }
+    val stateListFiles: MutableState<LoadingState<List<GalleryItem>>> = remember { mutableStateOf(LoadingState.Loading()) }
 
     LaunchedEffect(currentDirectory.value, viewType.value) {
         loadFiles(viewType.value, currentDirectory.value, directory, onLoading = {
             stateListFiles.value = LoadingState.Loading()
-        }) { files ->
-            stateListFiles.value = LoadingState.Success(files)
+        }) { items ->
+            stateListFiles.value = LoadingState.Success(items)
         }
         println(currentDirectory.value)
     }
@@ -121,20 +124,37 @@ fun Gallery(directory: File, changeDirectory: (File) -> Unit) {
 
 @OptIn(ExperimentalFoundationApi::class)
 @Composable
-private fun PhotosList(files: List<File>, onChangeDirectory: (File) -> Unit) {
+private fun PhotosList(files: List<GalleryItem>, onChangeDirectory: (File) -> Unit) {
     LazyVerticalGrid(
         cells = GridCells.Adaptive(minSize = 192.dp)
     ) {
-        files.forEach { file ->
-            item {
-                if (file.isDirectory) {
-                    DirectoryItem(file, onChangeDirectory)
-                } else {
-                    PhotoItem(file)
+        files.forEach { item ->
+            item(
+                span = {
+                    GridItemSpan(
+                        if (item !is GalleryItem.MonthDivider) {
+                            println("grid for item = 1")
+                            1
+                        } else {
+                            println("grid for item ${item.title} = $maxCurrentLineSpan")
+                            maxCurrentLineSpan
+                        }
+                    )
+                }
+            ) {
+                when (item) {
+                    is GalleryItem.Directory -> DirectoryItem(item.file, onChangeDirectory)
+                    is GalleryItem.MonthDivider -> MonthItem(item.title)
+                    is GalleryItem.Photo -> PhotoItem(item.file)
                 }
             }
         }
     }
+}
+
+@Composable
+private fun MonthItem(title: String) {
+    Text(text = title, modifier = Modifier.padding(24.dp))
 }
 
 @Composable
@@ -223,26 +243,56 @@ private fun loadFiles(
     currentDirectory: File,
     directory: File,
     onLoading: () -> Unit,
-    onSuccess: (List<File>) -> Unit
+    onSuccess: (List<GalleryItem>) -> Unit
 ) {
     CoroutineScope(Dispatchers.Main).launch {
         onLoading()
         val listFiles = when (viewType) {
             GalleryViewType.ALL -> getPhotosWithDateSort(directory)
-            GalleryViewType.FOLDERS -> currentDirectory.listFiles()?.toList().orEmpty()
+            GalleryViewType.FOLDERS -> currentDirectory.listFiles()?.toList().orEmpty().map { file ->
+                if (file.isDirectory) {
+                    GalleryItem.Directory(file)
+                } else {
+                    GalleryItem.Photo(file)
+                }
+            }
         }
         onSuccess(listFiles)
     }
 }
 
-private suspend fun getPhotosWithDateSort(directory: File): List<File> = suspendCoroutine { continuation ->
-    val result = getAllFilesRecursive(directory)
+private suspend fun getPhotosWithDateSort(directory: File): List<GalleryItem> = suspendCoroutine { continuation ->
+    val fileToAttrs = getAllFilesRecursive(directory)
         .map { it to Files.readAttributes(it.toPath(), BasicFileAttributes::class.java) }
         .sortedByDescending { (_, attrs) ->
             attrs.creationTime().toMillis()
         }
-        .map { (file, _) -> file }
-    continuation.resume(result)
+    val items = mutableListOf<GalleryItem>()
+    val monthFormat = SimpleDateFormat("LLLL yyyy")
+    fileToAttrs.forEachIndexed { index, (file, attrs) ->
+        if (index == 0 || !isSameMonths(attrs, fileToAttrs[index - 1].second)) {
+            items.add(
+                GalleryItem.MonthDivider(
+                    monthFormat
+                        .format(attrs.creationTime().toMillis())
+                        .replaceFirstChar { if (it.isLowerCase()) it.titlecase(Locale.getDefault()) else it.toString() }
+                )
+            )
+        }
+        items.add(GalleryItem.Photo(file))
+    }
+    continuation.resume(items)
+}
+
+private fun isSameMonths(first: BasicFileAttributes, second: BasicFileAttributes): Boolean {
+    val dateFirst = Calendar.getInstance().apply {
+        timeInMillis = first.creationTime().toMillis()
+    }
+    val dateSecond = Calendar.getInstance().apply {
+        timeInMillis = second.creationTime().toMillis()
+    }
+    return dateFirst.get(Calendar.MONTH) == dateSecond.get(Calendar.MONTH) &&
+            dateFirst.get(Calendar.YEAR) == dateSecond.get(Calendar.YEAR)
 }
 
 private fun getAllFilesRecursive(directory: File): List<File> {
