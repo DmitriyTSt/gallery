@@ -17,6 +17,7 @@ import androidx.compose.material.Text
 import androidx.compose.material.TopAppBar
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ArrowBack
+import androidx.compose.material.icons.filled.DateRange
 import androidx.compose.material.icons.filled.List
 import androidx.compose.material.icons.filled.Lock
 import androidx.compose.runtime.Composable
@@ -49,14 +50,14 @@ private val galleryCache = mutableMapOf<String, ImageBitmap>()
 
 @Composable
 fun Gallery(directory: File, changeDirectory: (File) -> Unit) {
-    val viewType = remember { mutableStateOf(GalleryViewType.ALL) }
+    val viewType = remember { mutableStateOf(GalleryViewType.FOLDERS) }
     val currentDirectory = remember { mutableStateOf(directory) }
     Column {
         TopAppBar(
             backgroundColor = Color.White,
             contentColor = Color.Black,
         ) {
-            if (currentDirectory.value != directory) {
+            if (currentDirectory.value != directory && viewType.value == GalleryViewType.FOLDERS) {
                 IconButton(onClick = {
                     currentDirectory.value = currentDirectory.value.parentFile
                 }) {
@@ -64,6 +65,19 @@ fun Gallery(directory: File, changeDirectory: (File) -> Unit) {
                 }
             }
             Text(text = "Галерея ${currentDirectory.value}", modifier = Modifier.padding(16.dp).weight(1f))
+            IconButton(onClick = {
+                viewType.value = GalleryViewType.values().let { it[(viewType.value.ordinal + 1) % it.size] }
+            }) {
+                Icon(
+                    painter = rememberVectorPainter(
+                        when (viewType.value) {
+                            GalleryViewType.ALL -> Icons.Default.DateRange
+                            GalleryViewType.FOLDERS -> Icons.Default.List
+                        }
+                    ),
+                    contentDescription = null,
+                )
+            }
             DirectorySelectorButton(
                 text = "Изменить",
                 oldDirectory = directory,
@@ -71,7 +85,7 @@ fun Gallery(directory: File, changeDirectory: (File) -> Unit) {
                 onSelect = changeDirectory,
             )
         }
-        val stateListFiles = loadListFiles(viewType.value, currentDirectory.value)
+        val stateListFiles = loadListFiles(viewType.value, currentDirectory.value, directory)
         Box(modifier = Modifier.fillMaxSize()) {
             when (stateListFiles.value) {
                 is LoadingState.Error -> Text(text = "Не удалось получить файлы", modifier = Modifier.align(Alignment.Center))
@@ -151,13 +165,15 @@ private fun loadImageFromFile(file: File): State<LoadingState<ImageBitmap>> {
             val image = galleryCache[file.toString()] ?: run {
                 val newImage = withContext(Dispatchers.IO) {
                     val bufferedImage = ImageIO.read(file)
-                    val thumbnail = Scalr.resize(
-                        bufferedImage,
-                        Scalr.Method.SPEED,
-                        Scalr.Mode.AUTOMATIC,
-                        192 * 2,
-                        192 * 2
-                    )
+                    val thumbnail = withContext(Dispatchers.Main) {
+                        Scalr.resize(
+                            bufferedImage,
+                            Scalr.Method.SPEED,
+                            Scalr.Mode.AUTOMATIC,
+                            192 * 2,
+                            192 * 2
+                        )
+                    }
                     thumbnail.toComposeImageBitmap()
                 }
                 galleryCache[file.toString()] = newImage
@@ -172,11 +188,15 @@ private fun loadImageFromFile(file: File): State<LoadingState<ImageBitmap>> {
 }
 
 @Composable
-private fun loadListFiles(viewType: GalleryViewType, directory: File): State<LoadingState<List<File>>> {
-    return produceState<LoadingState<List<File>>>(initialValue = LoadingState.Loading(), directory) {
+private fun loadListFiles(viewType: GalleryViewType, currentDirectory: File, directory: File): State<LoadingState<List<File>>> {
+    val directoryToLoad = when (viewType) {
+        GalleryViewType.ALL -> directory
+        GalleryViewType.FOLDERS -> currentDirectory
+    }
+    return produceState<LoadingState<List<File>>>(initialValue = LoadingState.Loading(), viewType, directoryToLoad) {
         val listFiles = when (viewType) {
             GalleryViewType.ALL -> getPhotosWithDateSort(directory)
-            GalleryViewType.FOLDERS -> directory.listFiles()?.toList().orEmpty()
+            GalleryViewType.FOLDERS -> currentDirectory.listFiles()?.toList().orEmpty()
         }
 
         value = LoadingState.Success(listFiles)
