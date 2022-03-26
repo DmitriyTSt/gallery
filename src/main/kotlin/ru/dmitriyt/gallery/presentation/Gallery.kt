@@ -10,7 +10,9 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.GridCells
 import androidx.compose.foundation.lazy.GridItemSpan
+import androidx.compose.foundation.lazy.LazyListState
 import androidx.compose.foundation.lazy.LazyVerticalGrid
+import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.material.CircularProgressIndicator
 import androidx.compose.material.Icon
 import androidx.compose.material.IconButton
@@ -63,6 +65,7 @@ fun Gallery(directory: File, changeDirectory: (File) -> Unit) {
     val viewType = remember { mutableStateOf(GalleryViewType.FOLDERS) }
     val currentDirectory = remember { mutableStateOf(directory) }
     val stateListFiles: MutableState<LoadingState<List<GalleryItem>>> = remember { mutableStateOf(LoadingState.Loading()) }
+    val scrollStates = remember { mutableStateOf(mutableMapOf<GalleryViewType, MutableMap<String, LazyListState>>()) }
 
     LaunchedEffect(currentDirectory.value, viewType.value) {
         loadFiles(viewType.value, currentDirectory.value, directory, onLoading = {
@@ -114,7 +117,15 @@ fun Gallery(directory: File, changeDirectory: (File) -> Unit) {
             when (stateListFiles.value) {
                 is LoadingState.Error -> Text(text = "Не удалось получить файлы", modifier = Modifier.align(Alignment.Center))
                 is LoadingState.Loading -> CircularProgressIndicator(modifier = Modifier.align(Alignment.Center))
-                is LoadingState.Success -> PhotosList((stateListFiles.value as LoadingState.Success).data) { newDirectory ->
+                is LoadingState.Success -> PhotosList(
+                    scrollStates = scrollStates,
+                    viewType = viewType.value,
+                    key = when (viewType.value) {
+                        GalleryViewType.ALL -> directory.toString()
+                        GalleryViewType.FOLDERS -> currentDirectory.value.toString()
+                    },
+                    files = (stateListFiles.value as LoadingState.Success).data
+                ) { newDirectory ->
                     currentDirectory.value = newDirectory
                 }
             }
@@ -124,8 +135,24 @@ fun Gallery(directory: File, changeDirectory: (File) -> Unit) {
 
 @OptIn(ExperimentalFoundationApi::class)
 @Composable
-private fun PhotosList(files: List<GalleryItem>, onChangeDirectory: (File) -> Unit) {
+private fun PhotosList(
+    scrollStates: MutableState<MutableMap<GalleryViewType, MutableMap<String, LazyListState>>>,
+    viewType: GalleryViewType,
+    key: String,
+    files: List<GalleryItem>,
+    onChangeDirectory: (File) -> Unit
+) {
+    val state = scrollStates.value[viewType]?.get(key) ?: run {
+        val viewTypeState = scrollStates.value[viewType]
+        if (viewTypeState == null) {
+            scrollStates.value[viewType] = mutableMapOf()
+        }
+        val newState = rememberLazyListState()
+        scrollStates.value[viewType]?.set(key, newState)
+        newState
+    }
     LazyVerticalGrid(
+        state = state,
         cells = GridCells.Adaptive(minSize = 192.dp)
     ) {
         files.forEach { item ->
