@@ -41,6 +41,7 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import org.imgscalr.Scalr
+import ru.dmitriyt.gallery.data.GalleryCacheStorage
 import ru.dmitriyt.gallery.data.model.GalleryViewType
 import ru.dmitriyt.gallery.data.model.LoadingState
 import ru.dmitriyt.gallery.presentation.util.ImageInformation
@@ -189,7 +190,7 @@ private fun DirectoryItem(directory: File, onClick: (File) -> Unit) {
 private fun loadImageFromFile(file: File): State<LoadingState<ImageBitmap>> {
     return produceState<LoadingState<ImageBitmap>>(initialValue = LoadingState.Loading(), file) {
         try {
-            val image = galleryCache[file.toString()] ?: run {
+            val image = GalleryCacheStorage.getFromCache(file.toString()) ?: run {
                 val newImage = withContext(Dispatchers.IO) {
                     val bufferedImage = ImageIO.read(file)
                     val imageInformation = ImageInformation.readImageInformation(file)
@@ -205,7 +206,7 @@ private fun loadImageFromFile(file: File): State<LoadingState<ImageBitmap>> {
                     }
                     thumbnail.toComposeImageBitmap()
                 }
-                galleryCache[file.toString()] = newImage
+                GalleryCacheStorage.addToCache(file.toString(), newImage)
                 newImage
             }
 
