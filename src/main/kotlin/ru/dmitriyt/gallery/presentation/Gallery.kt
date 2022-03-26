@@ -21,6 +21,8 @@ import androidx.compose.material.icons.filled.DateRange
 import androidx.compose.material.icons.filled.List
 import androidx.compose.material.icons.filled.Lock
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.MutableState
 import androidx.compose.runtime.State
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.produceState
@@ -34,11 +36,15 @@ import androidx.compose.ui.graphics.vector.rememberVectorPainter
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
+import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import org.imgscalr.Scalr
 import ru.dmitriyt.gallery.data.model.GalleryViewType
 import ru.dmitriyt.gallery.data.model.LoadingState
+import ru.dmitriyt.gallery.presentation.util.ImageInformation
+import ru.dmitriyt.gallery.presentation.util.ImageUtil
 import java.io.File
 import java.nio.file.Files
 import java.nio.file.attribute.BasicFileAttributes
@@ -52,6 +58,17 @@ private val galleryCache = mutableMapOf<String, ImageBitmap>()
 fun Gallery(directory: File, changeDirectory: (File) -> Unit) {
     val viewType = remember { mutableStateOf(GalleryViewType.FOLDERS) }
     val currentDirectory = remember { mutableStateOf(directory) }
+    val stateListFiles: MutableState<LoadingState<List<File>>> = remember { mutableStateOf(LoadingState.Loading()) }
+
+    LaunchedEffect(currentDirectory.value, viewType.value) {
+        loadFiles(viewType.value, currentDirectory.value, directory, onLoading = {
+            stateListFiles.value = LoadingState.Loading()
+        }) { files ->
+            stateListFiles.value = LoadingState.Success(files)
+        }
+        println(currentDirectory.value)
+    }
+
     Column {
         TopAppBar(
             backgroundColor = Color.White,
@@ -89,7 +106,6 @@ fun Gallery(directory: File, changeDirectory: (File) -> Unit) {
                 onSelect = changeDirectory,
             )
         }
-        val stateListFiles = loadListFiles(viewType.value, currentDirectory.value, directory)
         Box(modifier = Modifier.fillMaxSize()) {
             when (stateListFiles.value) {
                 is LoadingState.Error -> Text(text = "Не удалось получить файлы", modifier = Modifier.align(Alignment.Center))
@@ -125,11 +141,18 @@ private fun PhotoItem(photo: File) {
     val imageState = loadImageFromFile(photo)
     Box(modifier = Modifier.aspectRatio(1f).fillMaxSize().padding(2.dp)) {
         when (imageState.value) {
-            is LoadingState.Error -> Image(
-                painter = rememberVectorPainter(Icons.Default.Lock),
-                modifier = Modifier.align(Alignment.Center),
-                contentDescription = null,
-            )
+            is LoadingState.Error -> Column(modifier = Modifier.align(Alignment.Center)) {
+                Image(
+                    painter = rememberVectorPainter(Icons.Default.Lock),
+                    modifier = Modifier.align(Alignment.CenterHorizontally),
+                    contentDescription = null,
+                )
+                Text(
+                    text = (imageState.value as LoadingState.Error).message.orEmpty(),
+                    modifier = Modifier.padding(16.dp),
+                    textAlign = TextAlign.Center,
+                )
+            }
             is LoadingState.Loading -> CircularProgressIndicator(modifier = Modifier.align(Alignment.Center))
             is LoadingState.Success -> {
                 Image(
@@ -169,14 +192,16 @@ private fun loadImageFromFile(file: File): State<LoadingState<ImageBitmap>> {
             val image = galleryCache[file.toString()] ?: run {
                 val newImage = withContext(Dispatchers.IO) {
                     val bufferedImage = ImageIO.read(file)
+                    val imageInformation = ImageInformation.readImageInformation(file)
                     val thumbnail = withContext(Dispatchers.Main) {
-                        Scalr.resize(
+                        val resized = Scalr.resize(
                             bufferedImage,
                             Scalr.Method.SPEED,
                             Scalr.Mode.AUTOMATIC,
                             192 * 2,
                             192 * 2
                         )
+                        ImageUtil.fixImageByExif(resized, imageInformation.copy(width = resized.width, height = resized.height))
                     }
                     thumbnail.toComposeImageBitmap()
                 }
@@ -186,24 +211,26 @@ private fun loadImageFromFile(file: File): State<LoadingState<ImageBitmap>> {
 
             value = LoadingState.Success(image)
         } catch (e: Exception) {
-            value = LoadingState.Error()
+            e.printStackTrace()
+            value = LoadingState.Error(file.toString())
         }
     }
 }
 
-@Composable
-private fun loadListFiles(viewType: GalleryViewType, currentDirectory: File, directory: File): State<LoadingState<List<File>>> {
-    val directoryToLoad = when (viewType) {
-        GalleryViewType.ALL -> directory
-        GalleryViewType.FOLDERS -> currentDirectory
-    }
-    return produceState<LoadingState<List<File>>>(initialValue = LoadingState.Loading(), viewType, directoryToLoad) {
+private fun loadFiles(
+    viewType: GalleryViewType,
+    currentDirectory: File,
+    directory: File,
+    onLoading: () -> Unit,
+    onSuccess: (List<File>) -> Unit
+) {
+    CoroutineScope(Dispatchers.Main).launch {
+        onLoading()
         val listFiles = when (viewType) {
             GalleryViewType.ALL -> getPhotosWithDateSort(directory)
             GalleryViewType.FOLDERS -> currentDirectory.listFiles()?.toList().orEmpty()
         }
-
-        value = LoadingState.Success(listFiles)
+        onSuccess(listFiles)
     }
 }
 

@@ -19,6 +19,7 @@ repositories {
 dependencies {
     implementation(compose.desktop.currentOs)
     implementation("org.imgscalr:imgscalr-lib:4.2")
+    implementation("com.drewnoakes:metadata-extractor:2.16.0")
 }
 
 tasks.withType<KotlinCompile>() {
