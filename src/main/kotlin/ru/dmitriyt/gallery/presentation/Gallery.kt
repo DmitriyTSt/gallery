@@ -67,6 +67,9 @@ fun Gallery(directory: File, changeDirectory: (File) -> Unit) {
     val stateListFiles: MutableState<LoadingState<List<GalleryItem>>> = remember { mutableStateOf(LoadingState.Loading()) }
     val scrollStates = remember { mutableStateOf(mutableMapOf<GalleryViewType, MutableMap<String, LazyListState>>()) }
 
+    LaunchedEffect(directory) {
+        currentDirectory.value = directory
+    }
     LaunchedEffect(currentDirectory.value, viewType.value) {
         loadFiles(viewType.value, currentDirectory.value, directory, onLoading = {
             stateListFiles.value = LoadingState.Loading()
@@ -160,10 +163,8 @@ private fun PhotosList(
                 span = {
                     GridItemSpan(
                         if (item !is GalleryItem.MonthDivider) {
-                            println("grid for item = 1")
                             1
                         } else {
-                            println("grid for item ${item.title} = $maxCurrentLineSpan")
                             maxCurrentLineSpan
                         }
                     )
@@ -270,13 +271,13 @@ private fun loadFiles(
     currentDirectory: File,
     directory: File,
     onLoading: () -> Unit,
-    onSuccess: (List<GalleryItem>) -> Unit
+    onSuccess: (List<GalleryItem>) -> Unit,
 ) {
     CoroutineScope(Dispatchers.Main).launch {
         onLoading()
         val listFiles = when (viewType) {
             GalleryViewType.ALL -> getPhotosWithDateSort(directory)
-            GalleryViewType.FOLDERS -> currentDirectory.listFiles()?.toList().orEmpty().map { file ->
+            GalleryViewType.FOLDERS -> currentDirectory.listImages(withDirs = true).map { file ->
                 if (file.isDirectory) {
                     GalleryItem.Directory(file)
                 } else {
@@ -286,6 +287,14 @@ private fun loadFiles(
         }
         onSuccess(listFiles)
     }
+}
+
+private fun File.listImages(withDirs: Boolean): List<File> {
+    return listFiles()?.toList().orEmpty().filter { (if (withDirs) it.isDirectory else false) || it.isImage() }
+}
+
+private fun File.isImage(): Boolean {
+    return setOf("jpg", "png", "bmp", "webp", "ico", "gif", "jpeg").contains(this.extension.lowercase())
 }
 
 private suspend fun getPhotosWithDateSort(directory: File): List<GalleryItem> = suspendCoroutine { continuation ->
@@ -323,7 +332,7 @@ private fun isSameMonths(first: BasicFileAttributes, second: BasicFileAttributes
 }
 
 private fun getAllFilesRecursive(directory: File): List<File> {
-    val dirFiles = directory.listFiles()?.toList().orEmpty()
+    val dirFiles = directory.listImages(withDirs = true)
     val allFiles = mutableListOf<File>()
     dirFiles.forEach { dirFile ->
         if (dirFile.isDirectory) {

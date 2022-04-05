@@ -3,10 +3,9 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.material.MaterialTheme
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.getValue
+import androidx.compose.runtime.MutableState
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
-import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.window.Window
@@ -18,22 +17,22 @@ import java.io.File
 @Composable
 @Preview
 fun App() {
-    var directory: File? by remember { mutableStateOf(null) }
+    val directory: MutableState<File?> = remember { mutableStateOf(null) }
 
     MaterialTheme {
-        if (directory == null) {
+        if (directory.value == null) {
             Box(modifier = Modifier.fillMaxSize()) {
                 DirectorySelectorButton(
                     text = "Выбрать директорию",
-                    oldDirectory = directory,
+                    oldDirectory = directory.value,
                     modifier = Modifier.align(Alignment.Center)
                 ) { selected ->
-                    directory = selected
+                    directory.value = selected
                 }
             }
         } else {
-            Gallery(directory!!) { selected ->
-                directory = selected
+            Gallery(directory.value!!) { selected ->
+                directory.value = selected
             }
         }
     }
