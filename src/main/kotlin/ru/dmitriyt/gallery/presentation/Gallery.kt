@@ -27,6 +27,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.MutableState
 import androidx.compose.runtime.State
+import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.produceState
 import androidx.compose.runtime.remember
@@ -187,9 +188,9 @@ private fun MonthItem(title: String) {
 
 @Composable
 private fun PhotoItem(photo: File) {
-    val imageState = loadImageFromFile(photo)
+    val imageState by loadImageFromFile(photo)
     Box(modifier = Modifier.aspectRatio(1f).fillMaxSize().padding(2.dp)) {
-        when (imageState.value) {
+        when (imageState) {
             is LoadingState.Error -> Column(modifier = Modifier.align(Alignment.Center)) {
                 Image(
                     painter = rememberVectorPainter(Icons.Default.Lock),
@@ -197,7 +198,7 @@ private fun PhotoItem(photo: File) {
                     contentDescription = null,
                 )
                 Text(
-                    text = (imageState.value as LoadingState.Error).message.orEmpty(),
+                    text = (imageState as LoadingState.Error).message.orEmpty(),
                     modifier = Modifier.padding(16.dp),
                     textAlign = TextAlign.Center,
                 )
@@ -205,7 +206,7 @@ private fun PhotoItem(photo: File) {
             is LoadingState.Loading -> CircularProgressIndicator(modifier = Modifier.align(Alignment.Center))
             is LoadingState.Success -> {
                 Image(
-                    bitmap = (imageState.value as LoadingState.Success).data,
+                    bitmap = (imageState as LoadingState.Success).data,
                     contentScale = ContentScale.Crop,
                     contentDescription = null,
                 )
