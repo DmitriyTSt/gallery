@@ -8,6 +8,8 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.window.Tray
 import androidx.compose.ui.window.Window
 import androidx.compose.ui.window.application
 import ru.dmitriyt.gallery.presentation.DirectorySelectorButton
@@ -39,7 +41,16 @@ fun App() {
 }
 
 fun main() = application {
-    Window(title = "Галерея", onCloseRequest = ::exitApplication) {
+    val icon = painterResource("gallery.png")
+
+    Tray(
+        icon = icon,
+        menu = {
+            Item("Выйти", onClick = ::exitApplication)
+        }
+    )
+
+    Window(title = "Галерея", onCloseRequest = ::exitApplication, icon = icon) {
         App()
     }
 }
