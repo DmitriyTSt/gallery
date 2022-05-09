@@ -6,7 +6,6 @@ import androidx.compose.foundation.gestures.detectDragGestures
 import androidx.compose.foundation.gestures.rememberScrollableState
 import androidx.compose.foundation.gestures.scrollable
 import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.BoxScope
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
@@ -26,15 +25,21 @@ import androidx.compose.runtime.produceState
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
+import androidx.compose.ui.ExperimentalComposeUiApi
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.ImageBitmap
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.graphics.toComposeImageBitmap
 import androidx.compose.ui.graphics.vector.rememberVectorPainter
+import androidx.compose.ui.input.pointer.PointerEventType
 import androidx.compose.ui.input.pointer.consumeAllChanges
+import androidx.compose.ui.input.pointer.onPointerEvent
 import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.ui.layout.onSizeChanged
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.unit.IntSize
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Window
 import kotlinx.coroutines.Dispatchers
@@ -54,7 +59,7 @@ fun PhotoWindow(state: PhotoWindowState.Shown, onClose: () -> Unit, onLeftClick:
     Window(title = state.name, icon = painterResource(AppResources.appIcon), onCloseRequest = onClose) {
         MaterialTheme {
             Box(modifier = Modifier.fillMaxSize()) {
-                ImageStateView(imageState)
+                ImageStateView(modifier = Modifier.align(Alignment.Center), imageState = imageState)
                 FloatingActionButton(
                     modifier = Modifier.align(Alignment.CenterStart).padding(start = 16.dp),
                     onClick = {
@@ -83,9 +88,9 @@ fun PhotoWindow(state: PhotoWindowState.Shown, onClose: () -> Unit, onLeftClick:
 }
 
 @Composable
-private fun BoxScope.ImageStateView(imageState: LoadingState<ImageBitmap>) {
+private fun ImageStateView(modifier: Modifier, imageState: LoadingState<ImageBitmap>) {
     when (imageState) {
-        is LoadingState.Error -> Column(modifier = Modifier.align(Alignment.Center)) {
+        is LoadingState.Error -> Column(modifier = modifier) {
             Image(
                 painter = rememberVectorPainter(Icons.Default.Lock),
                 modifier = Modifier.align(Alignment.CenterHorizontally),
@@ -97,22 +102,27 @@ private fun BoxScope.ImageStateView(imageState: LoadingState<ImageBitmap>) {
                 textAlign = TextAlign.Center,
             )
         }
-        is LoadingState.Loading -> CircularProgressIndicator(modifier = Modifier.align(Alignment.Center))
+        is LoadingState.Loading -> CircularProgressIndicator(modifier = modifier)
         is LoadingState.Success -> {
-            PhotoView(imageState.data)
+            PhotoView(
+                modifier = modifier,
+                image = imageState.data,
+            )
         }
     }
 }
 
+@OptIn(ExperimentalComposeUiApi::class)
 @Composable
-private fun BoxScope.PhotoView(data: ImageBitmap) {
+private fun PhotoView(modifier: Modifier = Modifier, image: ImageBitmap) {
+    var mousePosition by remember { mutableStateOf(Offset(0f, 0f)) }
     var scale by remember { mutableStateOf(1f) }
     var offsetX by remember { mutableStateOf(0f) }
     var offsetY by remember { mutableStateOf(0f) }
+    var photoSize by remember { mutableStateOf(IntSize(0, 0)) }
 
     Image(
-        modifier = Modifier
-            .align(Alignment.Center)
+        modifier = modifier
             .graphicsLayer(
                 scaleX = scale,
                 scaleY = scale,
@@ -122,15 +132,26 @@ private fun BoxScope.PhotoView(data: ImageBitmap) {
             .scrollable(
                 orientation = Orientation.Vertical,
                 state = rememberScrollableState { delta ->
-                    scale += delta / 500
-                    scale = max(scale, 1f)
-                    if (scale == 1f) {
-                        offsetX = 0f
-                        offsetY = 0f
-                    }
+                    val scaleDivider = photoSize.height / 2
+                    val oldScale = scale
+                    scale = max(oldScale + delta * scale / scaleDivider, 1f)
+                    val centerX = photoSize.width / 2
+                    val centerY = photoSize.height / 2
+                    val mousePositionXDelta = centerX - mousePosition.x
+                    val mousePositionYDelta = centerY - mousePosition.y
+                    val scaledMousePositionXDelta = scale * mousePositionXDelta
+                    val scaledMousePositionYDelta = scale * mousePositionYDelta
+                    offsetX = (scaledMousePositionXDelta - mousePositionXDelta)
+                    offsetY = (scaledMousePositionYDelta - mousePositionYDelta)
                     delta
                 }
             )
+            .onSizeChanged { size ->
+                photoSize = size
+            }
+            .onPointerEvent(PointerEventType.Move) {
+                mousePosition = it.changes.first().position
+            }
             .pointerInput(Unit) {
                 detectDragGestures { change, dragAmount ->
                     change.consumeAllChanges()
@@ -140,7 +161,7 @@ private fun BoxScope.PhotoView(data: ImageBitmap) {
                     }
                 }
             },
-        bitmap = data,
+        bitmap = image,
         contentDescription = null,
     )
 }

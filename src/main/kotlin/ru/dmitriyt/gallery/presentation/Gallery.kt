@@ -232,7 +232,6 @@ private fun PhotosList(
                         if (!isMonthDivider) {
                             1
                         } else {
-                            println("maxCellsCount = $maxCellsCount")
                             maxCellsCount
                         }
                     )
