@@ -14,6 +14,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.vector.rememberVectorPainter
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import java.io.File
@@ -25,7 +26,7 @@ fun DirectoryItem(directory: File, onClick: (File) -> Unit) {
     }) {
         Column(modifier = Modifier.align(Alignment.Center)) {
             Image(
-                painter = rememberVectorPainter(Icons.Default.List),
+                painter = painterResource("ic_folder.svg"),
                 modifier = Modifier.align(Alignment.CenterHorizontally),
                 contentDescription = null,
             )
