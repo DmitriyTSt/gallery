@@ -52,3 +52,19 @@ jobs:
       with:
         name: dmt-gallery.msi
         path: build/compose/binaries/main/msi/gallery-1.0.0.msi
+        
+        
+  buildDmg:
+
+    runs-on: macos-latest
+
+    steps:
+    - uses: actions/checkout@v3
+    - name: Set up JDK 17
+      uses: actions/setup-java@v3
+      with:
+        java-version: '17'
+        distribution: 'temurin'
+    - name: PackageDmg with Gradle
+      run: |
+          ./gradlew package
