@@ -25,6 +25,7 @@ jobs:
         distribution: 'temurin'
     - name: Package with Gradle
       run: |
+          chmod +x gradlew
           ./gradlew package
     - name: Show files in libs
       run: |
