@@ -1,8 +1,6 @@
 package ru.dmitriyt.gallery.presentation
 
 import androidx.compose.foundation.ExperimentalFoundationApi
-import androidx.compose.foundation.Image
-import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.aspectRatio
@@ -16,56 +14,41 @@ import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.material.CircularProgressIndicator
 import androidx.compose.material.Icon
 import androidx.compose.material.IconButton
-import androidx.compose.material.SnackbarResult
 import androidx.compose.material.Text
 import androidx.compose.material.TopAppBar
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ArrowBack
 import androidx.compose.material.icons.filled.DateRange
 import androidx.compose.material.icons.filled.List
-import androidx.compose.material.icons.filled.Lock
-import androidx.compose.material.rememberScaffoldState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.MutableState
-import androidx.compose.runtime.State
-import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.produceState
 import androidx.compose.runtime.remember
-import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.ImageBitmap
-import androidx.compose.ui.graphics.toComposeImageBitmap
 import androidx.compose.ui.graphics.vector.rememberVectorPainter
-import androidx.compose.ui.layout.ContentScale
-import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.ExecutorCoroutineDispatcher
 import kotlinx.coroutines.ObsoleteCoroutinesApi
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.newFixedThreadPoolContext
-import kotlinx.coroutines.withContext
-import org.imgscalr.Scalr
-import ru.dmitriyt.gallery.data.GalleryCacheStorage
 import ru.dmitriyt.gallery.data.model.GalleryItem
 import ru.dmitriyt.gallery.data.model.GalleryViewType
 import ru.dmitriyt.gallery.data.model.LoadingState
+import ru.dmitriyt.gallery.data.model.PhotoWindowState
+import ru.dmitriyt.gallery.presentation.items.DirectoryItem
+import ru.dmitriyt.gallery.presentation.items.MonthItem
+import ru.dmitriyt.gallery.presentation.items.PhotoItem
 import ru.dmitriyt.gallery.presentation.util.ImageInformation
-import ru.dmitriyt.gallery.presentation.util.ImageUtil
 import java.io.File
-import java.nio.file.Files
-import java.nio.file.attribute.BasicFileAttributes
 import java.text.SimpleDateFormat
 import java.time.LocalDateTime
 import java.time.ZoneId
 import java.util.Locale
-import javax.imageio.ImageIO
 import kotlin.coroutines.resume
 import kotlin.coroutines.suspendCoroutine
 
@@ -75,6 +58,7 @@ fun Gallery(directory: File, windowWidth: Dp, changeDirectory: (File) -> Unit) {
     val currentDirectory = remember { mutableStateOf(directory) }
     val stateListFiles: MutableState<LoadingState<List<GalleryItem>>> = remember { mutableStateOf(LoadingState.Loading()) }
     val scrollStates = remember { mutableStateOf(mutableMapOf<GalleryViewType, MutableMap<String, LazyListState>>()) }
+    val photoWindow = remember { mutableStateOf<PhotoWindowState>(PhotoWindowState.Hidden) }
 
     LaunchedEffect(directory) {
         currentDirectory.value = directory
@@ -86,6 +70,52 @@ fun Gallery(directory: File, windowWidth: Dp, changeDirectory: (File) -> Unit) {
             stateListFiles.value = LoadingState.Success(items)
         }
         println(currentDirectory.value)
+    }
+
+    when (photoWindow.value) {
+        PhotoWindowState.Hidden -> Unit
+        is PhotoWindowState.Shown -> PhotoWindow(
+            state = photoWindow.value as PhotoWindowState.Shown,
+            onClose = {
+                photoWindow.value = PhotoWindowState.Hidden
+            },
+            onLeftClick = {
+                val state = photoWindow.value as PhotoWindowState.Shown
+                var index = state.index
+                (stateListFiles.value as? LoadingState.Success)?.data?.let { galleryItems ->
+                    do {
+                        index--
+                        if (index == -1) {
+                            index = galleryItems.lastIndex
+                        }
+                    } while (galleryItems[index] !is GalleryItem.Photo)
+                    val item = galleryItems[index] as GalleryItem.Photo
+                    photoWindow.value = PhotoWindowState.Shown(
+                        index = index,
+                        file = item.file,
+                        name = item.file.name,
+                    )
+                }
+            },
+            onRightClick = {
+                val state = photoWindow.value as PhotoWindowState.Shown
+                var index = state.index
+                (stateListFiles.value as? LoadingState.Success)?.data?.let { galleryItems ->
+                    do {
+                        index++
+                        if (index == galleryItems.size) {
+                            index = 0
+                        }
+                    } while (galleryItems[index] !is GalleryItem.Photo)
+                    val item = galleryItems[index] as GalleryItem.Photo
+                    photoWindow.value = PhotoWindowState.Shown(
+                        index = index,
+                        file = item.file,
+                        name = item.file.name,
+                    )
+                }
+            }
+        )
     }
 
     Column {
@@ -138,9 +168,17 @@ fun Gallery(directory: File, windowWidth: Dp, changeDirectory: (File) -> Unit) {
                     },
                     files = (stateListFiles.value as LoadingState.Success).data,
                     windowWidth = windowWidth,
-                ) { newDirectory ->
-                    currentDirectory.value = newDirectory
-                }
+                    onChangeDirectory = { newDirectory ->
+                        currentDirectory.value = newDirectory
+                    },
+                    onPhotoClick = { file, index, name ->
+                        photoWindow.value = PhotoWindowState.Shown(
+                            index = index,
+                            file = file,
+                            name = name,
+                        )
+                    },
+                )
             }
         }
     }
@@ -154,7 +192,8 @@ private fun PhotosList(
     key: String,
     files: List<GalleryItem>,
     windowWidth: Dp,
-    onChangeDirectory: (File) -> Unit
+    onChangeDirectory: (File) -> Unit,
+    onPhotoClick: (File, Int, String) -> Unit,
 ) {
     val cellMinSize = 192.dp
     val loadImagesContext = newFixedThreadPoolContext(1, "imagesLoad")
@@ -200,123 +239,12 @@ private fun PhotosList(
                 when (item) {
                     is GalleryItem.Directory -> DirectoryItem(item.file, onChangeDirectory)
                     is GalleryItem.MonthDivider -> MonthItem(item.title)
-                    is GalleryItem.Photo -> PhotoItem(item.file, loadImagesContext)
-                }
-            }
-        }
-    }
-}
-
-@Composable
-private fun MonthItem(title: String) {
-    Text(text = title, modifier = Modifier.padding(24.dp))
-}
-
-@Composable
-private fun PhotoItem(photo: File, loadImagesContext: ExecutorCoroutineDispatcher) {
-    val imageState by ImageState(photo, loadImagesContext)
-    Box(modifier = Modifier.aspectRatio(1f).fillMaxSize().padding(2.dp)) {
-        when (imageState) {
-            is LoadingState.Error -> Column(modifier = Modifier.align(Alignment.Center)) {
-                Image(
-                    painter = rememberVectorPainter(Icons.Default.Lock),
-                    modifier = Modifier.align(Alignment.CenterHorizontally),
-                    contentDescription = null,
-                )
-                Text(
-                    text = (imageState as LoadingState.Error).message.orEmpty(),
-                    modifier = Modifier.padding(16.dp),
-                    textAlign = TextAlign.Center,
-                )
-            }
-            is LoadingState.Loading -> CircularProgressIndicator(modifier = Modifier.align(Alignment.Center))
-            is LoadingState.Success -> {
-                val scaffoldState = rememberScaffoldState()
-                val coroutineScope = rememberCoroutineScope()
-                Image(
-                    bitmap = (imageState as LoadingState.Success).data,
-                    contentScale = ContentScale.Crop,
-                    contentDescription = null,
-                    modifier = Modifier.clickable {
-                        coroutineScope.launch {
-                            val attrs = withContext(Dispatchers.IO) {
-                                Files.readAttributes(photo.toPath(), BasicFileAttributes::class.java)
-                            }
-                            val result = scaffoldState
-                                .snackbarHostState
-                                .showSnackbar("${photo.name}: ${attrs.creationTime()}")
-                            when (result) {
-                                SnackbarResult.Dismissed -> println("Snackbar dismissed")
-                                SnackbarResult.ActionPerformed -> println("Snackbar shown ${photo.name}: ${attrs.creationTime()}")
-                            }
-                        }
+                    is GalleryItem.Photo -> PhotoItem(item.file, loadImagesContext) {
+                        onPhotoClick(item.file, index, item.file.name)
                     }
-                )
-            }
-        }
-    }
-}
-
-@Composable
-private fun DirectoryItem(directory: File, onClick: (File) -> Unit) {
-    Box(modifier = Modifier.aspectRatio(1f).fillMaxSize().padding(2.dp).clickable {
-        onClick(directory)
-    }) {
-        Column(modifier = Modifier.align(Alignment.Center)) {
-            Image(
-                painter = rememberVectorPainter(Icons.Default.List),
-                modifier = Modifier.align(Alignment.CenterHorizontally),
-                contentDescription = null,
-            )
-            Text(
-                text = directory.name,
-                textAlign = TextAlign.Center,
-                modifier = Modifier.align(Alignment.CenterHorizontally).padding(16.dp),
-            )
-        }
-    }
-}
-
-@Composable
-private fun ImageState(file: File, loadImagesContext: ExecutorCoroutineDispatcher): State<LoadingState<ImageBitmap>> {
-    return produceState<LoadingState<ImageBitmap>>(initialValue = LoadingState.Loading(), file) {
-        value = try {
-            val image = loadImage(file, loadImagesContext)
-
-            LoadingState.Success(image)
-        } catch (e: Exception) {
-            e.printStackTrace()
-            LoadingState.Error(file.toString())
-        }
-    }
-}
-
-private suspend fun loadImage(file: File, loadImagesContext: ExecutorCoroutineDispatcher): ImageBitmap {
-    return GalleryCacheStorage.getFromFastCache(file.toString()) ?: run {
-        val newBufferedImage = GalleryCacheStorage.getFromFileCache(file.toString()) ?: run {
-            withContext(Dispatchers.IO) {
-                val bufferedImage = ImageIO.read(file)
-                val imageInformation = ImageInformation.readImageInformation(file)
-                val thumbnail = withContext(loadImagesContext) {
-                    val resized = Scalr.resize(
-                        bufferedImage,
-                        Scalr.Method.SPEED,
-                        Scalr.Mode.AUTOMATIC,
-                        192 * 2,
-                        192 * 2
-                    )
-                    ImageUtil.fixImageByExif(
-                        resized,
-                        imageInformation.copy(width = resized.width, height = resized.height),
-                    )
                 }
-                GalleryCacheStorage.addToFileCache(file.toString(), thumbnail)
-                thumbnail
             }
         }
-        val newImage = newBufferedImage.toComposeImageBitmap()
-        GalleryCacheStorage.addToFastCache(file.toString(), newImage)
-        newImage
     }
 }
 

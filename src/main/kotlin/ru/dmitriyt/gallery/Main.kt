@@ -14,6 +14,7 @@ import androidx.compose.ui.window.Tray
 import androidx.compose.ui.window.Window
 import androidx.compose.ui.window.application
 import androidx.compose.ui.window.rememberWindowState
+import ru.dmitriyt.gallery.presentation.AppResources
 import ru.dmitriyt.gallery.presentation.DirectorySelectorButton
 import ru.dmitriyt.gallery.presentation.Gallery
 import java.io.File
@@ -43,10 +44,10 @@ fun App(windowWidth: Dp) {
 }
 
 fun main() = application {
-    val icon = painterResource("gallery.png")
+    val appIcon = painterResource(AppResources.appIcon)
 
     Tray(
-        icon = icon,
+        icon = appIcon,
         menu = {
             Item("Выйти", onClick = ::exitApplication)
         }
@@ -54,7 +55,7 @@ fun main() = application {
 
     val state = rememberWindowState()
 
-    Window(title = "Галерея", state = state, onCloseRequest = ::exitApplication, icon = icon) {
+    Window(title = "Галерея", state = state, onCloseRequest = ::exitApplication, icon = appIcon) {
         App(state.size.width)
     }
 }
