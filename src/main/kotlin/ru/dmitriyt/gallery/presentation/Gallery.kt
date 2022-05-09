@@ -42,7 +42,10 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.ExecutorCoroutineDispatcher
+import kotlinx.coroutines.ObsoleteCoroutinesApi
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.newFixedThreadPoolContext
 import kotlinx.coroutines.withContext
 import org.imgscalr.Scalr
 import ru.dmitriyt.gallery.data.GalleryCacheStorage
@@ -137,7 +140,7 @@ fun Gallery(directory: File, changeDirectory: (File) -> Unit) {
     }
 }
 
-@OptIn(ExperimentalFoundationApi::class)
+@OptIn(ExperimentalFoundationApi::class, ObsoleteCoroutinesApi::class)
 @Composable
 private fun PhotosList(
     scrollStates: MutableState<MutableMap<GalleryViewType, MutableMap<String, LazyListState>>>,
@@ -146,6 +149,7 @@ private fun PhotosList(
     files: List<GalleryItem>,
     onChangeDirectory: (File) -> Unit
 ) {
+    val loadImagesContext = newFixedThreadPoolContext(1, "imagesLoad")
     val state = scrollStates.value[viewType]?.get(key) ?: run {
         val viewTypeState = scrollStates.value[viewType]
         if (viewTypeState == null) {
@@ -174,7 +178,7 @@ private fun PhotosList(
                 when (item) {
                     is GalleryItem.Directory -> DirectoryItem(item.file, onChangeDirectory)
                     is GalleryItem.MonthDivider -> MonthItem(item.title)
-                    is GalleryItem.Photo -> PhotoItem(item.file)
+                    is GalleryItem.Photo -> PhotoItem(item.file, loadImagesContext)
                 }
             }
         }
@@ -187,8 +191,8 @@ private fun MonthItem(title: String) {
 }
 
 @Composable
-private fun PhotoItem(photo: File) {
-    val imageState by loadImageFromFile(photo)
+private fun PhotoItem(photo: File, loadImagesContext: ExecutorCoroutineDispatcher) {
+    val imageState by ImageState(photo, loadImagesContext)
     Box(modifier = Modifier.aspectRatio(1f).fillMaxSize().padding(2.dp)) {
         when (imageState) {
             is LoadingState.Error -> Column(modifier = Modifier.align(Alignment.Center)) {
@@ -236,34 +240,45 @@ private fun DirectoryItem(directory: File, onClick: (File) -> Unit) {
 }
 
 @Composable
-private fun loadImageFromFile(file: File): State<LoadingState<ImageBitmap>> {
+private fun ImageState(file: File, loadImagesContext: ExecutorCoroutineDispatcher): State<LoadingState<ImageBitmap>> {
     return produceState<LoadingState<ImageBitmap>>(initialValue = LoadingState.Loading(), file) {
-        try {
-            val image = GalleryCacheStorage.getFromCache(file.toString()) ?: run {
-                val newImage = withContext(Dispatchers.IO) {
-                    val bufferedImage = ImageIO.read(file)
-                    val imageInformation = ImageInformation.readImageInformation(file)
-                    val thumbnail = withContext(Dispatchers.Main) {
-                        val resized = Scalr.resize(
-                            bufferedImage,
-                            Scalr.Method.SPEED,
-                            Scalr.Mode.AUTOMATIC,
-                            192 * 2,
-                            192 * 2
-                        )
-                        ImageUtil.fixImageByExif(resized, imageInformation.copy(width = resized.width, height = resized.height))
-                    }
-                    thumbnail.toComposeImageBitmap()
-                }
-                GalleryCacheStorage.addToCache(file.toString(), newImage)
-                newImage
-            }
+        value = try {
+            val image = loadImage(file, loadImagesContext)
 
-            value = LoadingState.Success(image)
+            LoadingState.Success(image)
         } catch (e: Exception) {
             e.printStackTrace()
-            value = LoadingState.Error(file.toString())
+            LoadingState.Error(file.toString())
         }
+    }
+}
+
+private suspend fun loadImage(file: File, loadImagesContext: ExecutorCoroutineDispatcher): ImageBitmap {
+    return GalleryCacheStorage.getFromFastCache(file.toString()) ?: run {
+        val newBufferedImage = GalleryCacheStorage.getFromFileCache(file.toString()) ?: run {
+            withContext(Dispatchers.IO) {
+                val bufferedImage = ImageIO.read(file)
+                val imageInformation = ImageInformation.readImageInformation(file)
+                val thumbnail = withContext(loadImagesContext) {
+                    val resized = Scalr.resize(
+                        bufferedImage,
+                        Scalr.Method.SPEED,
+                        Scalr.Mode.AUTOMATIC,
+                        192 * 2,
+                        192 * 2
+                    )
+                    ImageUtil.fixImageByExif(
+                        resized,
+                        imageInformation.copy(width = resized.width, height = resized.height),
+                    )
+                }
+                GalleryCacheStorage.addToFileCache(file.toString(), thumbnail)
+                thumbnail
+            }
+        }
+        val newImage = newBufferedImage.toComposeImageBitmap()
+        GalleryCacheStorage.addToFastCache(file.toString(), newImage)
+        newImage
     }
 }
 
