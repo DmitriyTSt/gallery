@@ -12,7 +12,7 @@ on:
     branches: [ master ]
 
 jobs:
-  build:
+  buildDeb:
 
     runs-on: ubuntu-latest
 
@@ -23,11 +23,12 @@ jobs:
       with:
         java-version: '17'
         distribution: 'temurin'
-    - name: Package with Gradle
+    - name: PackageDeb with Gradle
       run: |
           chmod +x gradlew
           ./gradlew package
-    - name: Show files in libs
-      run: |
-          cd build/libs
-          ls
+    - name: Upload deb
+      uses: actions/upload-artifact@v2
+      with:
+        name: dmt-gallery.deb
+        path: build/compose/binaries/main/deb/gallery_1.0.0-1_amd64.deb
