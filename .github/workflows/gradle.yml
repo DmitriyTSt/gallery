@@ -18,7 +18,7 @@ jobs:
 
     steps:
     - uses: actions/checkout@v3
-    - name: Set up JDK 15
+    - name: Set up JDK 17
       uses: actions/setup-java@v3
       with:
         java-version: '17'
@@ -32,3 +32,18 @@ jobs:
       with:
         name: dmt-gallery.deb
         path: build/compose/binaries/main/deb/gallery_1.0.0-1_amd64.deb
+
+  buildMsi:
+
+    runs-on: windows-latest
+
+    steps:
+    - uses: actions/checkout@v3
+    - name: Set up JDK 17
+      uses: actions/setup-java@v3
+      with:
+        java-version: '17'
+        distribution: 'temurin'
+    - name: PackageMsi with Gradle
+      run: |
+          ./gradlew package
