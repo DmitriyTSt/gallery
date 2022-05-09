@@ -15,9 +15,9 @@ import androidx.compose.ui.window.Window
 import androidx.compose.ui.window.application
 import androidx.compose.ui.window.rememberWindowState
 import ru.dmitriyt.gallery.data.Settings
-import ru.dmitriyt.gallery.presentation.AppResources
 import ru.dmitriyt.gallery.presentation.DirectorySelectorButton
 import ru.dmitriyt.gallery.presentation.Gallery
+import ru.dmitriyt.gallery.presentation.resources.AppResources
 import java.io.File
 
 @Composable
@@ -29,7 +29,7 @@ fun App(windowWidth: Dp) {
         if (directory.value == null) {
             Box(modifier = Modifier.fillMaxSize()) {
                 DirectorySelectorButton(
-                    text = "Выбрать директорию",
+                    text = AppResources.strings().selectDirectoryLabel,
                     oldDirectory = directory.value,
                     modifier = Modifier.align(Alignment.Center)
                 ) { selected ->
@@ -52,13 +52,13 @@ fun main() = application {
     Tray(
         icon = appIcon,
         menu = {
-            Item("Выйти", onClick = ::exitApplication)
+            Item(AppResources.strings().exitLabel, onClick = ::exitApplication)
         }
     )
 
     val state = rememberWindowState()
 
-    Window(title = "Галерея", state = state, onCloseRequest = ::exitApplication, icon = appIcon) {
+    Window(title = AppResources.strings().galleryTitle, state = state, onCloseRequest = ::exitApplication, icon = appIcon) {
         App(state.size.width)
     }
 }

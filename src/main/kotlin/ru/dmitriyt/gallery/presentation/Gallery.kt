@@ -44,6 +44,7 @@ import ru.dmitriyt.gallery.data.model.PhotoWindowState
 import ru.dmitriyt.gallery.presentation.items.DirectoryItem
 import ru.dmitriyt.gallery.presentation.items.MonthItem
 import ru.dmitriyt.gallery.presentation.items.PhotoItem
+import ru.dmitriyt.gallery.presentation.resources.AppResources
 import ru.dmitriyt.gallery.presentation.util.ImageInformation
 import java.io.File
 import java.text.SimpleDateFormat
@@ -135,7 +136,10 @@ fun Gallery(directory: File, windowWidth: Dp, changeDirectory: (File) -> Unit) {
                 GalleryViewType.ALL -> directory
                 GalleryViewType.FOLDERS -> currentDirectory.value
             }
-            Text(text = "Галерея $currentName", modifier = Modifier.padding(16.dp).weight(1f))
+            Text(
+                text = AppResources.strings().galleryDirectoryTitle(currentName.toString()),
+                modifier = Modifier.padding(16.dp).weight(1f)
+            )
             IconButton(onClick = {
                 viewType.value = GalleryViewType.values().let { it[(viewType.value.ordinal + 1) % it.size] }
                 Settings.galleryViewType = viewType.value
@@ -151,7 +155,7 @@ fun Gallery(directory: File, windowWidth: Dp, changeDirectory: (File) -> Unit) {
                 )
             }
             DirectorySelectorButton(
-                text = "Изменить",
+                text = AppResources.strings().changeLabel,
                 oldDirectory = directory,
                 modifier = Modifier.padding(end = 16.dp),
                 onSelect = changeDirectory,
@@ -287,7 +291,7 @@ private suspend fun getPhotosWithDateSort(directory: File): List<GalleryItem> = 
             creatingDateTime
         }
     val items = mutableListOf<GalleryItem>()
-    val monthFormat = SimpleDateFormat("LLLL yyyy", Locale.getDefault())
+    val monthFormat = SimpleDateFormat("LLLL yyyy", AppResources.locale())
     fileToAttrs.forEachIndexed { index, (file, creatingDateTime) ->
         if (index == 0 || !isSameMonths(creatingDateTime, fileToAttrs[index - 1].second)) {
             items.add(

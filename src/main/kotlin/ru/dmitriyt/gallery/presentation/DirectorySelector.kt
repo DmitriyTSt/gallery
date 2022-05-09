@@ -31,6 +31,7 @@ import androidx.compose.ui.graphics.vector.rememberVectorPainter
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Dialog
 import ru.dmitriyt.gallery.data.model.LoadingState
+import ru.dmitriyt.gallery.presentation.resources.AppResources
 import java.io.File
 
 @Composable
@@ -49,7 +50,7 @@ fun DirectorySelectorButton(text: String, oldDirectory: File?, modifier: Modifie
 @Composable
 private fun DirectorySelectorDialog(showDialog: Boolean, oldDirectory: File?, onSelect: (File) -> Unit, closeDialog: () -> Unit) {
     if (showDialog) {
-        Dialog(title = "Выбор директории", onCloseRequest = {
+        Dialog(title = AppResources.strings().selectDirectoryTitle, onCloseRequest = {
             closeDialog()
         }) {
             DirectoryListDialogContent(oldDirectory) { selectedDirectory ->
@@ -119,7 +120,7 @@ private fun FileList(files: List<File>, onChangeDir: (File) -> Unit, onSelect: (
                     TextButton(onClick = {
                         onSelect(file)
                     }) {
-                        Text("Выбрать")
+                        Text(AppResources.strings().selectLabel)
                     }
                 }
             }

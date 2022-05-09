@@ -47,6 +47,7 @@ import kotlinx.coroutines.withContext
 import ru.dmitriyt.gallery.data.GalleryCacheStorage
 import ru.dmitriyt.gallery.data.model.LoadingState
 import ru.dmitriyt.gallery.data.model.PhotoWindowState
+import ru.dmitriyt.gallery.presentation.resources.AppResources
 import ru.dmitriyt.gallery.presentation.util.ImageInformation
 import ru.dmitriyt.gallery.presentation.util.ImageUtil
 import java.io.File
