@@ -16,6 +16,8 @@ import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.material.CircularProgressIndicator
 import androidx.compose.material.Icon
 import androidx.compose.material.IconButton
+import androidx.compose.material.Snackbar
+import androidx.compose.material.SnackbarResult
 import androidx.compose.material.Text
 import androidx.compose.material.TopAppBar
 import androidx.compose.material.icons.Icons
@@ -23,6 +25,7 @@ import androidx.compose.material.icons.filled.ArrowBack
 import androidx.compose.material.icons.filled.DateRange
 import androidx.compose.material.icons.filled.List
 import androidx.compose.material.icons.filled.Lock
+import androidx.compose.material.rememberScaffoldState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.MutableState
@@ -31,6 +34,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.produceState
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
@@ -39,6 +43,7 @@ import androidx.compose.ui.graphics.toComposeImageBitmap
 import androidx.compose.ui.graphics.vector.rememberVectorPainter
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -58,6 +63,8 @@ import java.io.File
 import java.nio.file.Files
 import java.nio.file.attribute.BasicFileAttributes
 import java.text.SimpleDateFormat
+import java.time.LocalDateTime
+import java.time.ZoneId
 import java.util.Calendar
 import java.util.Locale
 import javax.imageio.ImageIO
@@ -65,7 +72,7 @@ import kotlin.coroutines.resume
 import kotlin.coroutines.suspendCoroutine
 
 @Composable
-fun Gallery(directory: File, changeDirectory: (File) -> Unit) {
+fun Gallery(directory: File, windowWidth: Dp, changeDirectory: (File) -> Unit) {
     val viewType = remember { mutableStateOf(GalleryViewType.FOLDERS) }
     val currentDirectory = remember { mutableStateOf(directory) }
     val stateListFiles: MutableState<LoadingState<List<GalleryItem>>> = remember { mutableStateOf(LoadingState.Loading()) }
@@ -131,7 +138,8 @@ fun Gallery(directory: File, changeDirectory: (File) -> Unit) {
                         GalleryViewType.ALL -> directory.toString()
                         GalleryViewType.FOLDERS -> currentDirectory.value.toString()
                     },
-                    files = (stateListFiles.value as LoadingState.Success).data
+                    files = (stateListFiles.value as LoadingState.Success).data,
+                    windowWidth = windowWidth,
                 ) { newDirectory ->
                     currentDirectory.value = newDirectory
                 }
@@ -147,8 +155,10 @@ private fun PhotosList(
     viewType: GalleryViewType,
     key: String,
     files: List<GalleryItem>,
+    windowWidth: Dp,
     onChangeDirectory: (File) -> Unit
 ) {
+    val cellMinSize = 192.dp
     val loadImagesContext = newFixedThreadPoolContext(1, "imagesLoad")
     val state = scrollStates.value[viewType]?.get(key) ?: run {
         val viewTypeState = scrollStates.value[viewType]
@@ -161,7 +171,7 @@ private fun PhotosList(
     }
     LazyVerticalGrid(
         state = state,
-        cells = GridCells.Adaptive(minSize = 192.dp)
+        cells = GridCells.Adaptive(minSize = cellMinSize)
     ) {
         files.forEach { item ->
             item(
@@ -170,7 +180,9 @@ private fun PhotosList(
                         if (item !is GalleryItem.MonthDivider) {
                             1
                         } else {
-                            maxCurrentLineSpan
+                            val maxCellsCount = (windowWidth / cellMinSize).toInt()
+                            println("maxCellsCount = $maxCellsCount")
+                            maxCellsCount
                         }
                     )
                 }
@@ -209,10 +221,26 @@ private fun PhotoItem(photo: File, loadImagesContext: ExecutorCoroutineDispatche
             }
             is LoadingState.Loading -> CircularProgressIndicator(modifier = Modifier.align(Alignment.Center))
             is LoadingState.Success -> {
+                val scaffoldState = rememberScaffoldState()
+                val coroutineScope = rememberCoroutineScope()
                 Image(
                     bitmap = (imageState as LoadingState.Success).data,
                     contentScale = ContentScale.Crop,
                     contentDescription = null,
+                    modifier = Modifier.clickable {
+                        coroutineScope.launch {
+                            val attrs = withContext(Dispatchers.IO) {
+                                Files.readAttributes(photo.toPath(), BasicFileAttributes::class.java)
+                            }
+                            val result = scaffoldState
+                                .snackbarHostState
+                                .showSnackbar("${photo.name}: ${attrs.creationTime()}")
+                            when (result) {
+                                SnackbarResult.Dismissed -> println("Snackbar dismissed")
+                                SnackbarResult.ActionPerformed -> println("Snackbar shown ${photo.name}: ${attrs.creationTime()}")
+                            }
+                        }
+                    }
                 )
             }
         }
@@ -315,18 +343,18 @@ private fun File.isImage(): Boolean {
 
 private suspend fun getPhotosWithDateSort(directory: File): List<GalleryItem> = suspendCoroutine { continuation ->
     val fileToAttrs = getAllFilesRecursive(directory)
-        .map { it to Files.readAttributes(it.toPath(), BasicFileAttributes::class.java) }
-        .sortedByDescending { (_, attrs) ->
-            attrs.creationTime().toMillis()
+        .map { it to ImageInformation.getPhotoCreationTime(it) }
+        .sortedByDescending { (_, creatingDateTime) ->
+            creatingDateTime
         }
     val items = mutableListOf<GalleryItem>()
     val monthFormat = SimpleDateFormat("LLLL yyyy")
-    fileToAttrs.forEachIndexed { index, (file, attrs) ->
-        if (index == 0 || !isSameMonths(attrs, fileToAttrs[index - 1].second)) {
+    fileToAttrs.forEachIndexed { index, (file, creatingDateTime) ->
+        if (index == 0 || !isSameMonths(creatingDateTime, fileToAttrs[index - 1].second)) {
             items.add(
                 GalleryItem.MonthDivider(
                     monthFormat
-                        .format(attrs.creationTime().toMillis())
+                        .format(creatingDateTime.atZone(ZoneId.systemDefault()).toInstant().toEpochMilli())
                         .replaceFirstChar { if (it.isLowerCase()) it.titlecase(Locale.getDefault()) else it.toString() }
                 )
             )
@@ -336,15 +364,8 @@ private suspend fun getPhotosWithDateSort(directory: File): List<GalleryItem> = 
     continuation.resume(items)
 }
 
-private fun isSameMonths(first: BasicFileAttributes, second: BasicFileAttributes): Boolean {
-    val dateFirst = Calendar.getInstance().apply {
-        timeInMillis = first.creationTime().toMillis()
-    }
-    val dateSecond = Calendar.getInstance().apply {
-        timeInMillis = second.creationTime().toMillis()
-    }
-    return dateFirst.get(Calendar.MONTH) == dateSecond.get(Calendar.MONTH) &&
-            dateFirst.get(Calendar.YEAR) == dateSecond.get(Calendar.YEAR)
+private fun isSameMonths(first: LocalDateTime, second: LocalDateTime): Boolean {
+    return first.monthValue == second.monthValue && first.year == second.year
 }
 
 private fun getAllFilesRecursive(directory: File): List<File> {

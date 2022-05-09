@@ -9,16 +9,18 @@ import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.window.Tray
 import androidx.compose.ui.window.Window
 import androidx.compose.ui.window.application
+import androidx.compose.ui.window.rememberWindowState
 import ru.dmitriyt.gallery.presentation.DirectorySelectorButton
 import ru.dmitriyt.gallery.presentation.Gallery
 import java.io.File
 
 @Composable
 @Preview
-fun App() {
+fun App(windowWidth: Dp) {
     val directory: MutableState<File?> = remember { mutableStateOf(null) }
 
     MaterialTheme {
@@ -33,7 +35,7 @@ fun App() {
                 }
             }
         } else {
-            Gallery(directory.value!!) { selected ->
+            Gallery(directory.value!!, windowWidth) { selected ->
                 directory.value = selected
             }
         }
@@ -50,7 +52,9 @@ fun main() = application {
         }
     )
 
-    Window(title = "Галерея", onCloseRequest = ::exitApplication, icon = icon) {
-        App()
+    val state = rememberWindowState()
+
+    Window(title = "Галерея", state = state, onCloseRequest = ::exitApplication, icon = icon) {
+        App(state.size.width)
     }
 }

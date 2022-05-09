@@ -46,14 +46,14 @@ object GalleryCacheStorage {
             }
         }
         ImageIO.write(image, "jpeg", imageFile)
-        println("saved to ${File(CACHE_DIR, base64key)}")
+//        println("saved to ${File(CACHE_DIR, base64key)}")
     }
 
     suspend fun getFromFileCache(key: String): BufferedImage? = withContext(Dispatchers.IO) {
         val base64key = Base64.getEncoder().encodeToString(key.toByteArray(Charsets.UTF_8)).takeLast(15) + ".jpg"
         val file = File(CACHE_DIR, base64key)
         if (file.exists()) {
-            println("$file")
+//            println("$file")
             ImageIO.read(file)
         } else {
             null
