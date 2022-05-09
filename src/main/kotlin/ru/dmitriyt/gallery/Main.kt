@@ -14,6 +14,7 @@ import androidx.compose.ui.window.Tray
 import androidx.compose.ui.window.Window
 import androidx.compose.ui.window.application
 import androidx.compose.ui.window.rememberWindowState
+import ru.dmitriyt.gallery.data.Settings
 import ru.dmitriyt.gallery.presentation.AppResources
 import ru.dmitriyt.gallery.presentation.DirectorySelectorButton
 import ru.dmitriyt.gallery.presentation.Gallery
@@ -22,7 +23,7 @@ import java.io.File
 @Composable
 @Preview
 fun App(windowWidth: Dp) {
-    val directory: MutableState<File?> = remember { mutableStateOf(null) }
+    val directory: MutableState<File?> = remember { mutableStateOf(Settings.directory) }
 
     MaterialTheme {
         if (directory.value == null) {
@@ -32,11 +33,13 @@ fun App(windowWidth: Dp) {
                     oldDirectory = directory.value,
                     modifier = Modifier.align(Alignment.Center)
                 ) { selected ->
+                    Settings.directory = selected
                     directory.value = selected
                 }
             }
         } else {
             Gallery(directory.value!!, windowWidth) { selected ->
+                Settings.directory = selected
                 directory.value = selected
             }
         }

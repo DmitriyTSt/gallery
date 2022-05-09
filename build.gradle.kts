@@ -5,6 +5,7 @@ import org.jetbrains.kotlin.gradle.tasks.KotlinCompile
 plugins {
     kotlin("jvm") version "1.6.10"
     id("org.jetbrains.compose") version "1.1.0"
+    kotlin("plugin.serialization") version "1.6.10"
 }
 
 group = "ru.dmitriyt"
@@ -20,6 +21,7 @@ dependencies {
     implementation(compose.desktop.currentOs)
     implementation("org.imgscalr:imgscalr-lib:4.2")
     implementation("com.drewnoakes:metadata-extractor:2.16.0")
+    implementation("org.jetbrains.kotlinx:kotlinx-serialization-json:1.3.2")
 }
 
 tasks.withType<KotlinCompile>() {

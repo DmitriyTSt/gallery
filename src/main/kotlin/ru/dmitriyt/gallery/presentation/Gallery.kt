@@ -36,6 +36,7 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ObsoleteCoroutinesApi
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.newFixedThreadPoolContext
+import ru.dmitriyt.gallery.data.Settings
 import ru.dmitriyt.gallery.data.model.GalleryItem
 import ru.dmitriyt.gallery.data.model.GalleryViewType
 import ru.dmitriyt.gallery.data.model.LoadingState
@@ -54,7 +55,7 @@ import kotlin.coroutines.suspendCoroutine
 
 @Composable
 fun Gallery(directory: File, windowWidth: Dp, changeDirectory: (File) -> Unit) {
-    val viewType = remember { mutableStateOf(GalleryViewType.FOLDERS) }
+    val viewType = remember { mutableStateOf(Settings.galleryViewType) }
     val currentDirectory = remember { mutableStateOf(directory) }
     val stateListFiles: MutableState<LoadingState<List<GalleryItem>>> = remember { mutableStateOf(LoadingState.Loading()) }
     val scrollStates = remember { mutableStateOf(mutableMapOf<GalleryViewType, MutableMap<String, LazyListState>>()) }
@@ -137,6 +138,7 @@ fun Gallery(directory: File, windowWidth: Dp, changeDirectory: (File) -> Unit) {
             Text(text = "Галерея $currentName", modifier = Modifier.padding(16.dp).weight(1f))
             IconButton(onClick = {
                 viewType.value = GalleryViewType.values().let { it[(viewType.value.ordinal + 1) % it.size] }
+                Settings.galleryViewType = viewType.value
             }) {
                 Icon(
                     painter = rememberVectorPainter(
