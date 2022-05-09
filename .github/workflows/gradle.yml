@@ -69,3 +69,8 @@ jobs:
       run: |
           chmod +x gradlew
           ./gradlew package
+    - name: Upload dmg
+      uses: actions/upload-artifact@v2
+      with:
+        name: dmt-gallery.dmg
+        path: build/compose/binaries/main/dmg/Gallery-1.0.0.dmg
