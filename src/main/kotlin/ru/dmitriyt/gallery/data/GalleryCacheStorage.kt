@@ -4,10 +4,7 @@ import androidx.compose.ui.graphics.ImageBitmap
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import java.awt.image.BufferedImage
-import java.io.File
-import java.util.Base64
 import java.util.LinkedList
-import javax.imageio.ImageIO
 
 object GalleryCacheStorage {
     private const val CACHE_SIZE = 100
