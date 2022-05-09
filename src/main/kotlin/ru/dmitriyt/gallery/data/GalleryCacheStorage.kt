@@ -4,7 +4,10 @@ import androidx.compose.ui.graphics.ImageBitmap
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import java.awt.image.BufferedImage
+import java.io.File
+import java.util.Base64
 import java.util.LinkedList
+import javax.imageio.ImageIO
 
 object GalleryCacheStorage {
     private const val CACHE_SIZE = 100
@@ -47,31 +50,27 @@ object GalleryCacheStorage {
     }
 
     suspend fun addToFileCache(key: String, image: BufferedImage) = withContext(Dispatchers.IO) {
-        return@withContext Unit
-//        val base64key = Base64.getEncoder().encodeToString(key.toByteArray(Charsets.UTF_8)).takeLast(15) + ".jpg"
-//        File(CACHE_DIR).apply {
-//            if (!exists()) {
-//                mkdir()
-//            }
-//        }
-//        val imageFile = File(CACHE_DIR, base64key).apply {
-//            if (!exists()) {
-//                createNewFile()
-//            }
-//        }
-//        ImageIO.write(image, "jpeg", imageFile)
-//        println("saved to ${File(CACHE_DIR, base64key)}")
+        val base64key = Base64.getEncoder().encodeToString(key.toByteArray(Charsets.UTF_8)).takeLast(15) + ".jpg"
+        File(CACHE_DIR).apply {
+            if (!exists()) {
+                mkdir()
+            }
+        }
+        val imageFile = File(CACHE_DIR, base64key).apply {
+            if (!exists()) {
+                createNewFile()
+            }
+        }
+        ImageIO.write(image, "jpg", imageFile)
     }
 
     suspend fun getFromFileCache(key: String): BufferedImage? = withContext(Dispatchers.IO) {
-        return@withContext null
-//        val base64key = Base64.getEncoder().encodeToString(key.toByteArray(Charsets.UTF_8)).takeLast(15) + ".jpg"
-//        val file = File(CACHE_DIR, base64key)
-//        if (file.exists()) {
-////            println("$file")
-//            ImageIO.read(file)
-//        } else {
-//            null
-//        }
+        val base64key = Base64.getEncoder().encodeToString(key.toByteArray(Charsets.UTF_8)).takeLast(15) + ".jpg"
+        val file = File(CACHE_DIR, base64key)
+        if (file.exists()) {
+            ImageIO.read(file)
+        } else {
+            null
+        }
     }
 }

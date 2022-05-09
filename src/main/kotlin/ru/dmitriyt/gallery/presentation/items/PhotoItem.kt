@@ -82,11 +82,10 @@ private fun ImageState(file: File, loadImagesContext: ExecutorCoroutineDispatche
 
 private suspend fun loadImage(file: File, loadImagesContext: ExecutorCoroutineDispatcher): ImageBitmap {
     return GalleryCacheStorage.getFromFastCache(file.toString()) ?: run {
-        val newBufferedImage = GalleryCacheStorage.getFromFileCache(file.toString()) ?: run {
+        val bufferedImage = GalleryCacheStorage.getFromFileCache(file.toString()) ?: run {
             withContext(Dispatchers.IO) {
                 val bufferedImage = ImageIO.read(file)
-                val imageInformation = ImageInformation.readImageInformation(file)
-                val thumbnail = withContext(loadImagesContext) {
+                val resized = withContext(loadImagesContext) {
                     val resized = Scalr.resize(
                         bufferedImage,
                         Scalr.Method.SPEED,
@@ -94,16 +93,18 @@ private suspend fun loadImage(file: File, loadImagesContext: ExecutorCoroutineDi
                         192 * 2,
                         192 * 2
                     )
-                    ImageUtil.fixImageByExif(
-                        resized,
-                        imageInformation.copy(width = resized.width, height = resized.height),
-                    )
+                    resized
                 }
-                GalleryCacheStorage.addToFileCache(file.toString(), thumbnail)
-                thumbnail
+                GalleryCacheStorage.addToFileCache(file.toString(), resized)
+                resized
             }
         }
-        val newImage = newBufferedImage.toComposeImageBitmap()
+        val imageInformation = ImageInformation.readImageInformation(file)
+        val thumbnail = ImageUtil.fixImageByExif(
+            bufferedImage,
+            imageInformation.copy(width = bufferedImage.width, height = bufferedImage.height),
+        )
+        val newImage = thumbnail.toComposeImageBitmap()
         GalleryCacheStorage.addToFastCache(file.toString(), newImage)
         newImage
     }
