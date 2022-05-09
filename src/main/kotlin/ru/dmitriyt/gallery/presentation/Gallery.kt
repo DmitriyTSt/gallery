@@ -288,7 +288,7 @@ private suspend fun getPhotosWithDateSort(directory: File): List<GalleryItem> = 
             creatingDateTime
         }
     val items = mutableListOf<GalleryItem>()
-    val monthFormat = SimpleDateFormat("LLLL yyyy")
+    val monthFormat = SimpleDateFormat("LLLL yyyy", Locale.getDefault())
     fileToAttrs.forEachIndexed { index, (file, creatingDateTime) ->
         if (index == 0 || !isSameMonths(creatingDateTime, fileToAttrs[index - 1].second)) {
             items.add(
