@@ -33,8 +33,19 @@ compose.desktop {
         mainClass = "MainKt"
         nativeDistributions {
             targetFormats(TargetFormat.Dmg, TargetFormat.Msi, TargetFormat.Deb)
-            packageName = "gallery"
+            packageName = "Gallery"
             packageVersion = "1.0.0"
+            description = "DmitriyT's gallery app"
+
+            macOS {
+                iconFile.set(project.file("src/main/resource/gallery.icns"))
+            }
+            windows {
+                iconFile.set(project.file("src/main/resource/gallery.ico"))
+            }
+            linux {
+                iconFile.set(project.file("src/main/resource/gallery.png"))
+            }
         }
     }
 }
