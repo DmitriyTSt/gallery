@@ -30,6 +30,8 @@ import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Window
+import androidx.compose.ui.window.WindowPlacement
+import androidx.compose.ui.window.rememberWindowState
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
@@ -49,15 +51,16 @@ private const val KEY_EVENT_DELAY = 200L
 @OptIn(ExperimentalComposeUiApi::class)
 @Composable
 fun PhotoWindow(state: PhotoWindowState.Shown, onClose: () -> Unit, onLeftClick: () -> Unit, onRightClick: () -> Unit) {
+    val windowState = rememberWindowState(placement = WindowPlacement.Maximized)
     val imageState by ImageState(state.file)
     val coroutineScope = rememberCoroutineScope()
     var keyEventJob: Job? = null
     Window(
         title = state.name,
+        state = windowState,
         icon = painterResource(AppResources.appIcon),
         onCloseRequest = onClose,
         onKeyEvent = { keyEvent ->
-            println("${keyEvent.key}")
             when (keyEvent.key) {
                 Key.DirectionLeft -> {
                     keyEventJob?.cancel()
