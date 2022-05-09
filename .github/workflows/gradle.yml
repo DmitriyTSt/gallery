@@ -47,3 +47,8 @@ jobs:
     - name: PackageMsi with Gradle
       run: |
           ./gradlew package
+    - name: Upload msi
+      uses: actions/upload-artifact@v2
+      with:
+        name: dmt-gallery.msi
+        path: build/compose/binaries/main/msi/gallery-1.0.0.msi
