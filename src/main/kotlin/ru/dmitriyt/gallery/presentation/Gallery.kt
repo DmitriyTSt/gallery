@@ -44,6 +44,7 @@ import ru.dmitriyt.gallery.data.model.PhotoWindowState
 import ru.dmitriyt.gallery.presentation.items.DirectoryItem
 import ru.dmitriyt.gallery.presentation.items.MonthItem
 import ru.dmitriyt.gallery.presentation.items.PhotoItem
+import ru.dmitriyt.gallery.presentation.photoview.PhotoWindow
 import ru.dmitriyt.gallery.presentation.resources.AppResources
 import ru.dmitriyt.gallery.presentation.util.ImageInformation
 import java.io.File
