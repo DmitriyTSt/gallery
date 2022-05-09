@@ -41,19 +41,13 @@ import ru.dmitriyt.gallery.data.model.GalleryItem
 import ru.dmitriyt.gallery.data.model.GalleryViewType
 import ru.dmitriyt.gallery.data.model.LoadingState
 import ru.dmitriyt.gallery.data.model.PhotoWindowState
+import ru.dmitriyt.gallery.data.repository.PhotoRepository
 import ru.dmitriyt.gallery.presentation.items.DirectoryItem
 import ru.dmitriyt.gallery.presentation.items.MonthItem
 import ru.dmitriyt.gallery.presentation.items.PhotoItem
 import ru.dmitriyt.gallery.presentation.photoview.PhotoWindow
 import ru.dmitriyt.gallery.presentation.resources.AppResources
-import ru.dmitriyt.gallery.presentation.util.ImageInformation
 import java.io.File
-import java.text.SimpleDateFormat
-import java.time.LocalDateTime
-import java.time.ZoneId
-import java.util.Locale
-import kotlin.coroutines.resume
-import kotlin.coroutines.suspendCoroutine
 
 @Composable
 fun Gallery(directory: File, windowWidth: Dp, changeDirectory: (File) -> Unit) {
@@ -72,7 +66,6 @@ fun Gallery(directory: File, windowWidth: Dp, changeDirectory: (File) -> Unit) {
         }) { items ->
             stateListFiles.value = LoadingState.Success(items)
         }
-        println(currentDirectory.value)
     }
 
     when (photoWindow.value) {
@@ -191,69 +184,6 @@ fun Gallery(directory: File, windowWidth: Dp, changeDirectory: (File) -> Unit) {
     }
 }
 
-@OptIn(ExperimentalFoundationApi::class, ObsoleteCoroutinesApi::class)
-@Composable
-private fun PhotosList(
-    scrollStates: MutableState<MutableMap<GalleryViewType, MutableMap<String, LazyListState>>>,
-    viewType: GalleryViewType,
-    key: String,
-    files: List<GalleryItem>,
-    windowWidth: Dp,
-    onChangeDirectory: (File) -> Unit,
-    onPhotoClick: (File, Int, String) -> Unit,
-) {
-    val cellMinSize = 192.dp
-    val loadImagesContext = newFixedThreadPoolContext(1, "imagesLoad")
-    val state = scrollStates.value[viewType]?.get(key) ?: run {
-        val viewTypeState = scrollStates.value[viewType]
-        if (viewTypeState == null) {
-            scrollStates.value[viewType] = mutableMapOf()
-        }
-        val newState = rememberLazyListState()
-        scrollStates.value[viewType]?.set(key, newState)
-        newState
-    }
-    LazyVerticalGrid(
-        state = state,
-        cells = GridCells.Adaptive(minSize = cellMinSize)
-    ) {
-        var lastDividerIndex = -1
-        files.forEachIndexed { index, item ->
-            val isMonthDivider = item is GalleryItem.MonthDivider
-            val maxCellsCount = (windowWidth / cellMinSize).toInt()
-            // пустые элементы, так как GridItemSpan не умеет переносить ячейку на всю ширину если в строке уже есть элементы
-            if (isMonthDivider) {
-                val photoBetweenMonths = index - lastDividerIndex - 1
-                repeat((maxCellsCount - (photoBetweenMonths % maxCellsCount)).takeIf { it != maxCellsCount } ?: 0) {
-                    item {
-                        Box(modifier = Modifier.aspectRatio(1f).fillMaxSize().padding(2.dp))
-                    }
-                }
-                lastDividerIndex = index
-            }
-            item(
-                span = {
-                    GridItemSpan(
-                        if (!isMonthDivider) {
-                            1
-                        } else {
-                            maxCellsCount
-                        }
-                    )
-                }
-            ) {
-                when (item) {
-                    is GalleryItem.Directory -> DirectoryItem(item.file, onChangeDirectory)
-                    is GalleryItem.MonthDivider -> MonthItem(item.title)
-                    is GalleryItem.Photo -> PhotoItem(item.file, loadImagesContext) {
-                        onPhotoClick(item.file, index, item.file.name)
-                    }
-                }
-            }
-        }
-    }
-}
-
 private fun loadFiles(
     viewType: GalleryViewType,
     currentDirectory: File,
@@ -264,63 +194,9 @@ private fun loadFiles(
     CoroutineScope(Dispatchers.Main).launch {
         onLoading()
         val listFiles = when (viewType) {
-            GalleryViewType.ALL -> getPhotosWithDateSort(directory)
-            GalleryViewType.FOLDERS -> currentDirectory.listImages(withDirs = true).map { file ->
-                if (file.isDirectory) {
-                    GalleryItem.Directory(file)
-                } else {
-                    GalleryItem.Photo(file)
-                }
-            }
+            GalleryViewType.ALL -> PhotoRepository.getPhotosWithDateSort(directory)
+            GalleryViewType.FOLDERS -> PhotoRepository.getPhotoDirectories(currentDirectory)
         }
         onSuccess(listFiles)
     }
-}
-
-private fun File.listImages(withDirs: Boolean): List<File> {
-    return listFiles()?.toList().orEmpty().filter { (if (withDirs) it.isDirectory else false) || it.isImage() }
-}
-
-private fun File.isImage(): Boolean {
-    return setOf("jpg", "png", "bmp", "webp", "ico", "gif", "jpeg").contains(this.extension.lowercase())
-}
-
-private suspend fun getPhotosWithDateSort(directory: File): List<GalleryItem> = suspendCoroutine { continuation ->
-    val fileToAttrs = getAllFilesRecursive(directory)
-        .map { it to ImageInformation.getPhotoCreationTime(it) }
-        .sortedByDescending { (_, creatingDateTime) ->
-            creatingDateTime
-        }
-    val items = mutableListOf<GalleryItem>()
-    val monthFormat = SimpleDateFormat("LLLL yyyy", AppResources.locale())
-    fileToAttrs.forEachIndexed { index, (file, creatingDateTime) ->
-        if (index == 0 || !isSameMonths(creatingDateTime, fileToAttrs[index - 1].second)) {
-            items.add(
-                GalleryItem.MonthDivider(
-                    monthFormat
-                        .format(creatingDateTime.atZone(ZoneId.systemDefault()).toInstant().toEpochMilli())
-                        .replaceFirstChar { if (it.isLowerCase()) it.titlecase(Locale.getDefault()) else it.toString() }
-                )
-            )
-        }
-        items.add(GalleryItem.Photo(file))
-    }
-    continuation.resume(items)
-}
-
-private fun isSameMonths(first: LocalDateTime, second: LocalDateTime): Boolean {
-    return first.monthValue == second.monthValue && first.year == second.year
-}
-
-private fun getAllFilesRecursive(directory: File): List<File> {
-    val dirFiles = directory.listImages(withDirs = true)
-    val allFiles = mutableListOf<File>()
-    dirFiles.forEach { dirFile ->
-        if (dirFile.isDirectory) {
-            allFiles.addAll(getAllFilesRecursive(dirFile))
-        } else {
-            allFiles.add(dirFile)
-        }
-    }
-    return allFiles
 }

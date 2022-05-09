@@ -69,7 +69,6 @@ fun PhotoItem(photo: File, loadImagesContext: ExecutorCoroutineDispatcher, onIma
 @Composable
 private fun ImageState(file: File, loadImagesContext: ExecutorCoroutineDispatcher): State<LoadingState<ImageBitmap>> {
     return produceState<LoadingState<ImageBitmap>>(initialValue = LoadingState.Loading(), file) {
-        value = LoadingState.Loading()
         value = try {
             val image = loadImage(file, loadImagesContext)
 
