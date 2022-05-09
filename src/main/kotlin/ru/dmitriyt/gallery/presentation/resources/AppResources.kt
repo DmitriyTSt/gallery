@@ -4,7 +4,7 @@ import java.util.Locale
 
 object AppResources {
     const val appIcon = "gallery.png"
-    private var language: String = "en"
+    private var language: String = "ru"
 
     fun strings(): Strings {
         return when (language) {

@@ -17,16 +17,23 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.State
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.produceState
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Alignment
+import androidx.compose.ui.ExperimentalComposeUiApi
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.ImageBitmap
 import androidx.compose.ui.graphics.toComposeImageBitmap
 import androidx.compose.ui.graphics.vector.rememberVectorPainter
+import androidx.compose.ui.input.key.Key
+import androidx.compose.ui.input.key.key
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Window
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.Job
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import ru.dmitriyt.gallery.data.GalleryCacheStorage
 import ru.dmitriyt.gallery.data.model.LoadingState
@@ -37,12 +44,46 @@ import ru.dmitriyt.gallery.presentation.util.ImageUtil
 import java.io.File
 import javax.imageio.ImageIO
 
+private const val KEY_EVENT_DELAY = 200L
+
+@OptIn(ExperimentalComposeUiApi::class)
 @Composable
 fun PhotoWindow(state: PhotoWindowState.Shown, onClose: () -> Unit, onLeftClick: () -> Unit, onRightClick: () -> Unit) {
     val imageState by ImageState(state.file)
-    Window(title = state.name, icon = painterResource(AppResources.appIcon), onCloseRequest = onClose) {
+    val coroutineScope = rememberCoroutineScope()
+    var keyEventJob: Job? = null
+    Window(
+        title = state.name,
+        icon = painterResource(AppResources.appIcon),
+        onCloseRequest = onClose,
+        onKeyEvent = { keyEvent ->
+            println("${keyEvent.key}")
+            when (keyEvent.key) {
+                Key.DirectionLeft -> {
+                    keyEventJob?.cancel()
+                    keyEventJob = coroutineScope.launch {
+                        delay(KEY_EVENT_DELAY)
+                        onLeftClick()
+                    }
+                    true
+                }
+                Key.DirectionRight -> {
+                    keyEventJob?.cancel()
+                    keyEventJob = coroutineScope.launch {
+                        delay(KEY_EVENT_DELAY)
+                        onRightClick()
+                    }
+                    true
+                }
+                else -> false
+            }
+        }
+    ) {
         MaterialTheme {
-            Box(modifier = Modifier.fillMaxSize()) {
+            Box(
+                modifier = Modifier
+                    .fillMaxSize()
+            ) {
                 ImageStateView(modifier = Modifier.align(Alignment.Center), imageState = imageState)
                 FloatingActionButton(
                     modifier = Modifier.align(Alignment.CenterStart).padding(start = 16.dp),
