@@ -16,7 +16,6 @@ import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.material.CircularProgressIndicator
 import androidx.compose.material.Icon
 import androidx.compose.material.IconButton
-import androidx.compose.material.Snackbar
 import androidx.compose.material.SnackbarResult
 import androidx.compose.material.Text
 import androidx.compose.material.TopAppBar
@@ -65,7 +64,6 @@ import java.nio.file.attribute.BasicFileAttributes
 import java.text.SimpleDateFormat
 import java.time.LocalDateTime
 import java.time.ZoneId
-import java.util.Calendar
 import java.util.Locale
 import javax.imageio.ImageIO
 import kotlin.coroutines.resume
@@ -173,14 +171,26 @@ private fun PhotosList(
         state = state,
         cells = GridCells.Adaptive(minSize = cellMinSize)
     ) {
-        files.forEach { item ->
+        var lastDividerIndex = -1
+        files.forEachIndexed { index, item ->
+            val isMonthDivider = item is GalleryItem.MonthDivider
+            val maxCellsCount = (windowWidth / cellMinSize).toInt()
+            // пустые элементы, так как GridItemSpan не умеет переносить ячейку на всю ширину если в строке уже есть элементы
+            if (isMonthDivider) {
+                val photoBetweenMonths = index - lastDividerIndex - 1
+                repeat((maxCellsCount - (photoBetweenMonths % maxCellsCount)).takeIf { it != maxCellsCount } ?: 0) {
+                    item {
+                        Box(modifier = Modifier.aspectRatio(1f).fillMaxSize().padding(2.dp))
+                    }
+                }
+                lastDividerIndex = index
+            }
             item(
                 span = {
                     GridItemSpan(
-                        if (item !is GalleryItem.MonthDivider) {
+                        if (!isMonthDivider) {
                             1
                         } else {
-                            val maxCellsCount = (windowWidth / cellMinSize).toInt()
                             println("maxCellsCount = $maxCellsCount")
                             maxCellsCount
                         }
