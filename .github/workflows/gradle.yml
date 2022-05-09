@@ -67,4 +67,5 @@ jobs:
         distribution: 'temurin'
     - name: PackageDmg with Gradle
       run: |
+          chmod +x gradlew
           ./gradlew package
