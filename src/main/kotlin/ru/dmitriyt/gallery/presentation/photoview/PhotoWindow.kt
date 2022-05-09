@@ -13,6 +13,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ArrowBack
 import androidx.compose.material.icons.filled.ArrowForward
 import androidx.compose.material.icons.filled.Lock
+import androidx.compose.material.icons.filled.Warning
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.State
 import androidx.compose.runtime.getValue
@@ -58,7 +59,7 @@ fun PhotoWindow(state: PhotoWindowState.Shown, onClose: () -> Unit, onLeftClick:
     Window(
         title = state.name,
         state = windowState,
-        icon = painterResource(AppResources.appIcon),
+        icon = painterResource(AppResources.icons.appIcon),
         onCloseRequest = onClose,
         onKeyEvent = { keyEvent ->
             when (keyEvent.key) {
@@ -120,7 +121,7 @@ private fun ImageStateView(modifier: Modifier, imageState: LoadingState<ImageBit
     when (imageState) {
         is LoadingState.Error -> Column(modifier = modifier) {
             Image(
-                painter = rememberVectorPainter(Icons.Default.Lock),
+                painter = rememberVectorPainter(Icons.Default.Warning),
                 modifier = Modifier.align(Alignment.CenterHorizontally),
                 contentDescription = null,
             )

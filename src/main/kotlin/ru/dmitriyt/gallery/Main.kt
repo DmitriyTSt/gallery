@@ -47,7 +47,7 @@ fun App(windowWidth: Dp) {
 }
 
 fun main() = application {
-    val appIcon = painterResource(AppResources.appIcon)
+    val appIcon = painterResource(AppResources.icons.appIcon)
 
     Tray(
         icon = appIcon,
