@@ -3,9 +3,7 @@ package ru.dmitriyt.gallery.data
 import androidx.compose.ui.graphics.ImageBitmap
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
-import org.jetbrains.skiko.toBitmap
 import java.awt.image.BufferedImage
-import java.io.ByteArrayOutputStream
 import java.io.File
 import java.util.Base64
 import java.util.LinkedList
@@ -13,8 +11,11 @@ import javax.imageio.ImageIO
 
 object GalleryCacheStorage {
     private const val CACHE_SIZE = 100
+    private const val CACHE_FULL_SIZE = 30
     private val cacheMap = mutableMapOf<String, ImageBitmap>()
+    private val cacheFullMap = mutableMapOf<String, ImageBitmap>()
     private val keys = LinkedList<String>()
+    private val keysFull = LinkedList<String>()
 
     private const val CACHE_DIR = ".gallery_cache"
 
@@ -31,6 +32,21 @@ object GalleryCacheStorage {
     @Synchronized
     fun getFromFastCache(key: String): ImageBitmap? {
         return cacheMap[key]
+    }
+
+    @Synchronized
+    fun addToFastCacheFull(key: String, image: ImageBitmap) {
+        if (keysFull.size >= CACHE_FULL_SIZE) {
+            val keyToRemove = keysFull.pop()
+            cacheFullMap.remove(keyToRemove)
+        }
+        keysFull.add(key)
+        cacheFullMap[key] = image
+    }
+
+    @Synchronized
+    fun getFromFastCacheFull(key: String): ImageBitmap? {
+        return cacheFullMap[key]
     }
 
     suspend fun addToFileCache(key: String, image: BufferedImage) = withContext(Dispatchers.IO) {

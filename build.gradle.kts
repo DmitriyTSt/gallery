@@ -38,13 +38,13 @@ compose.desktop {
             description = "DmitriyT's gallery app"
 
             macOS {
-                iconFile.set(project.file("src/main/resource/gallery.icns"))
+                iconFile.set(project.file("src/main/resources/gallery.icns"))
             }
             windows {
-                iconFile.set(project.file("src/main/resource/gallery.ico"))
+                iconFile.set(project.file("src/main/resources/gallery.ico"))
             }
             linux {
-                iconFile.set(project.file("src/main/resource/gallery.png"))
+                iconFile.set(project.file("src/main/resources/gallery.png"))
             }
         }
     }

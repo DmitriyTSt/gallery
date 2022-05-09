@@ -39,6 +39,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Window
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
+import ru.dmitriyt.gallery.data.GalleryCacheStorage
 import ru.dmitriyt.gallery.data.model.LoadingState
 import ru.dmitriyt.gallery.data.model.PhotoWindowState
 import ru.dmitriyt.gallery.presentation.util.ImageInformation
@@ -160,13 +161,17 @@ private fun ImageState(file: File): State<LoadingState<ImageBitmap>> {
 }
 
 private suspend fun loadImage(file: File): ImageBitmap {
-    return withContext(Dispatchers.IO) {
-        val bufferedImage = ImageIO.read(file)
-        val imageInformation = ImageInformation.readImageInformation(file)
-        val fixedOrientation = ImageUtil.fixImageByExif(
-            bufferedImage,
-            imageInformation.copy(width = bufferedImage.width, height = bufferedImage.height),
-        )
-        fixedOrientation.toComposeImageBitmap()
+    return GalleryCacheStorage.getFromFastCacheFull(file.toString()) ?: run {
+        withContext(Dispatchers.IO) {
+            val bufferedImage = ImageIO.read(file)
+            val imageInformation = ImageInformation.readImageInformation(file)
+            val fixedOrientation = ImageUtil.fixImageByExif(
+                bufferedImage,
+                imageInformation.copy(width = bufferedImage.width, height = bufferedImage.height),
+            )
+            val image = fixedOrientation.toComposeImageBitmap()
+            GalleryCacheStorage.addToFastCacheFull(file.toString(), image)
+            image
+        }
     }
 }
