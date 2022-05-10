@@ -114,7 +114,6 @@ fun PhotoListScrollBar(
                 if (firstVisibleElementIndex != null) {
                     val firstVisibleElement = getItemIndexByRowIndex(monthDividersState, firstVisibleElementIndex, rowSize)
                     offsetY = firstVisibleElement * elementHeight
-                    println("offset scroll = $offsetY row = $firstVisibleElementIndex elem = $firstVisibleElement")
                     scrollingHoverMonthIndex = getScrollingMonthIndex(monthDividersState, offsetY, elementHeight)
                 }
             }
@@ -145,7 +144,6 @@ fun PhotoListScrollBar(
                                 delay(100)
                                 val newElementIndex = (offsetY / elementHeight).roundToInt()
                                 val newRowIndex = getRowIndexByItemIndex(monthDividersState, newElementIndex, rowSize)
-                                println("offset drag = ${offsetY} newRow = $newRowIndex newElem = $newElementIndex")
                                 listState.scrollToItem(newRowIndex)
                             }
                         }
@@ -187,6 +185,6 @@ private fun getRowIndexByItemIndex(monthDividers: List<MonthDividerInfo>, itemIn
     return if (itemIndex == currentMonth.index) {
         currentMonth.monthRowIndex
     } else {
-        currentMonth.monthRowIndex + (itemIndex - currentMonth.index) / 10 + 1
+        currentMonth.monthRowIndex + (itemIndex - currentMonth.index) / rowSize + 1
     }
 }
