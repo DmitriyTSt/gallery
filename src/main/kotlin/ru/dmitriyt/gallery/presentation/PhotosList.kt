@@ -15,6 +15,7 @@ import androidx.compose.foundation.lazy.GridItemSpan
 import androidx.compose.foundation.lazy.LazyListState
 import androidx.compose.foundation.lazy.LazyVerticalGrid
 import androidx.compose.foundation.lazy.rememberLazyListState
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.Card
 import androidx.compose.material.Text
 import androidx.compose.runtime.Composable
@@ -185,9 +186,6 @@ private fun ScrollBar(
 
     LaunchedEffect(monthDividers) {
         monthDividersState = monthDividers
-        monthDividers.forEach {
-            println("month = ${it.title} ${it.index} ${it.photoCount} ${it.rows} ${it.monthRowIndex}")
-        }
     }
 
     Box(modifier = Modifier.fillMaxSize()) {
@@ -196,29 +194,31 @@ private fun ScrollBar(
             Box(modifier = Modifier.fillMaxSize().background(Color.Black.copy(alpha = 0.5f)))
 
             Box(modifier = Modifier.fillMaxHeight().align(Alignment.TopEnd).padding(vertical = 28.dp)) {
-                monthDividers.forEachIndexed { arrIndex, item ->
+                monthDividers.forEach { item ->
                     val monthItemOffset = item.index * elementHeight
-                    val paddingEnd = when (arrIndex % 3) {
-                        0 -> 0.dp
-                        1 -> 128.dp
-                        else -> 256.dp
-                    }
-                    Card(modifier = Modifier
-                        .padding(end = paddingEnd)
-                        .align(Alignment.TopEnd)
-                        .offset { IntOffset(0, monthItemOffset.roundToInt() - 12) }
-                    ) {
-                        val fontWeight = if (scrollingHoverMonthIndex == item.index) {
-                            FontWeight.BOLD
-                        } else {
-                            FontWeight.NORMAL
+                    if (scrollingHoverMonthIndex == item.index) {
+                        Card(modifier = Modifier
+                            .align(Alignment.TopEnd)
+                            .padding(28.dp)
+                            .offset { IntOffset(0, monthItemOffset.roundToInt() - 18) }
+                        ) {
+                            Text(
+                                modifier = Modifier.padding(4.dp),
+                                text = item.title,
+                                fontSize = 12.sp,
+                            )
                         }
-                        Text(
-                            modifier = Modifier.padding(4.dp),
-                            text = item.title,
-                            fontSize = 12.sp,
-                            fontWeight = androidx.compose.ui.text.font.FontWeight(fontWeight)
-                        )
+                    } else {
+                        Card(
+                            modifier = Modifier
+                                .align(Alignment.TopEnd)
+                                .padding(16.dp)
+                                .size(4.dp)
+                                .offset { IntOffset(0, monthItemOffset.roundToInt() - 2) },
+                            shape = RoundedCornerShape(2.dp),
+                        ) {
+
+                        }
                     }
                 }
             }
