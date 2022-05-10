@@ -42,6 +42,7 @@ fun PhotoListScrollBar(
     modifier: Modifier,
     listState: LazyListState,
     monthDividers: List<MonthDividerInfo>,
+    rowSize: Int,
 ) {
     var size by remember { mutableStateOf(IntSize(0, 0)) }
     var elementHeight by remember { mutableStateOf(0f) }
@@ -53,21 +54,24 @@ fun PhotoListScrollBar(
 
     LaunchedEffect(monthDividers) {
         monthDividersState = monthDividers
+//        monthDividers.forEach {
+//            println("month ${it.title} ${it.index} ${it.monthRowIndex}")
+//        }
     }
 
     Box(modifier = Modifier.fillMaxSize()) {
 
-        if (isUserScrolling) {
+        if (true) {
             Box(modifier = Modifier.fillMaxSize().background(Color.Black.copy(alpha = 0.5f)))
 
-            Box(modifier = Modifier.fillMaxHeight().align(Alignment.TopEnd).padding(vertical = 28.dp)) {
+            Box(modifier = Modifier.fillMaxHeight().align(Alignment.TopEnd).padding(vertical = 24.dp)) {
                 monthDividers.forEach { item ->
                     val monthItemOffset = item.index * elementHeight
                     if (scrollingHoverMonthIndex == item.index) {
                         Card(modifier = Modifier
                             .align(Alignment.TopEnd)
-                            .padding(28.dp)
-                            .offset { IntOffset(0, monthItemOffset.roundToInt() - 18) }
+                            .padding(end = 28.dp)
+                            .offset { IntOffset(0, monthItemOffset.roundToInt() - 10) }
                         ) {
                             Text(
                                 modifier = Modifier.padding(4.dp),
@@ -75,17 +79,23 @@ fun PhotoListScrollBar(
                                 fontSize = 12.sp,
                             )
                         }
+                        Card(
+                            modifier = Modifier
+                                .align(Alignment.TopEnd)
+                                .padding(end = 15.dp)
+                                .size(6.dp)
+                                .offset { IntOffset(0, monthItemOffset.roundToInt() - 3) },
+                            shape = RoundedCornerShape(3.dp),
+                        ) {}
                     } else {
                         Card(
                             modifier = Modifier
                                 .align(Alignment.TopEnd)
-                                .padding(16.dp)
+                                .padding(end = 16.dp)
                                 .size(4.dp)
                                 .offset { IntOffset(0, monthItemOffset.roundToInt() - 2) },
                             shape = RoundedCornerShape(2.dp),
-                        ) {
-
-                        }
+                        ) {}
                     }
                 }
             }
@@ -100,9 +110,11 @@ fun PhotoListScrollBar(
             val firstVisibleElementIndex = listState.layoutInfo.visibleItemsInfo.firstOrNull()?.index
             elementHeight = size.height.toFloat() / listState.layoutInfo.totalItemsCount
 
-            LaunchedEffect(firstVisibleElementIndex) {
+            LaunchedEffect(firstVisibleElementIndex, elementHeight) {
                 if (firstVisibleElementIndex != null) {
-                    offsetY = firstVisibleElementIndex * elementHeight
+                    val firstVisibleElement = getItemIndexByRowIndex(monthDividersState, firstVisibleElementIndex, rowSize)
+                    offsetY = firstVisibleElement * elementHeight
+                    println("offset scroll = $offsetY row = $firstVisibleElementIndex elem = $firstVisibleElement")
                     scrollingHoverMonthIndex = getScrollingMonthIndex(monthDividersState, offsetY, elementHeight)
                 }
             }
@@ -126,12 +138,15 @@ fun PhotoListScrollBar(
                             change.consumeAllChanges()
                             offsetY += dragAmount.y
                             offsetY = min(max(0f, offsetY), size.height.toFloat() - 48f)
+
                             scrollingHoverMonthIndex = getScrollingMonthIndex(monthDividersState, offsetY, elementHeight)
                             scrollJob?.cancel()
                             scrollJob = scrollCoroutineScope.launch {
                                 delay(100)
                                 val newElementIndex = (offsetY / elementHeight).roundToInt()
-                                listState.scrollToItem(newElementIndex)
+                                val newRowIndex = getRowIndexByItemIndex(monthDividersState, newElementIndex, rowSize)
+                                println("offset drag = ${offsetY} newRow = $newRowIndex newElem = $newElementIndex")
+                                listState.scrollToItem(newRowIndex)
                             }
                         }
                     },
@@ -148,7 +163,30 @@ private fun getScrollingMonthIndex(
     offsetY: Float,
     elementHeight: Float,
 ): Int? {
-    // currentElement - строка
     val currentElement = (offsetY / elementHeight).roundToInt()
-    return monthDividers.findLast { currentElement >= it.monthRowIndex }?.index
+    return monthDividers.findLast { currentElement >= it.index }?.index
+}
+
+private fun getItemIndexByRowIndex(monthDividers: List<MonthDividerInfo>, rowIndex: Int, rowSize: Int): Int {
+    if (monthDividers.isEmpty()) {
+        return rowIndex * rowSize
+    }
+    val currentMonth = monthDividers.findLast { rowIndex >= it.monthRowIndex } ?: monthDividers.last()
+    return if (rowIndex == currentMonth.monthRowIndex) {
+        currentMonth.index
+    } else {
+        currentMonth.index + 1 + ((rowIndex - 1) - currentMonth.monthRowIndex) * rowSize
+    }
+}
+
+private fun getRowIndexByItemIndex(monthDividers: List<MonthDividerInfo>, itemIndex: Int, rowSize: Int): Int {
+    if (monthDividers.isEmpty()) {
+        return itemIndex / rowSize
+    }
+    val currentMonth = monthDividers.findLast { itemIndex >= it.index } ?: monthDividers.last()
+    return if (itemIndex == currentMonth.index) {
+        currentMonth.monthRowIndex
+    } else {
+        currentMonth.monthRowIndex + (itemIndex - currentMonth.index) / 10 + 1
+    }
 }

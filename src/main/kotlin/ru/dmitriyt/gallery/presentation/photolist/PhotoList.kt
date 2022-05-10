@@ -137,6 +137,7 @@ fun PhotoList(
                 modifier = Modifier.align(Alignment.TopEnd),
                 listState = state,
                 monthDividers = monthDividers,
+                rowSize = maxCellsCount,
             )
         }
     }
