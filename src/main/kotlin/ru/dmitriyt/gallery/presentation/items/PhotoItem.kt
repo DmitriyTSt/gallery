@@ -18,21 +18,14 @@ import androidx.compose.runtime.produceState
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.ImageBitmap
-import androidx.compose.ui.graphics.toComposeImageBitmap
 import androidx.compose.ui.graphics.vector.rememberVectorPainter
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
-import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExecutorCoroutineDispatcher
-import kotlinx.coroutines.withContext
-import org.imgscalr.Scalr
-import ru.dmitriyt.gallery.data.GalleryCacheStorage
 import ru.dmitriyt.gallery.data.model.LoadingState
-import ru.dmitriyt.gallery.presentation.util.ImageInformation
-import ru.dmitriyt.gallery.presentation.util.ImageUtil
+import ru.dmitriyt.gallery.data.repository.PhotoRepository
 import java.io.File
-import javax.imageio.ImageIO
 
 @Composable
 fun PhotoItem(photo: File, loadImagesContext: ExecutorCoroutineDispatcher, onImageClick: () -> Unit) {
@@ -70,42 +63,12 @@ fun PhotoItem(photo: File, loadImagesContext: ExecutorCoroutineDispatcher, onIma
 private fun ImageState(file: File, loadImagesContext: ExecutorCoroutineDispatcher): State<LoadingState<ImageBitmap>> {
     return produceState<LoadingState<ImageBitmap>>(initialValue = LoadingState.Loading(), file) {
         value = try {
-            val image = loadImage(file, loadImagesContext)
+            val image = PhotoRepository.loadImagePreview(file, loadImagesContext)
 
             LoadingState.Success(image)
         } catch (e: Exception) {
             e.printStackTrace()
             LoadingState.Error(file.toString())
         }
-    }
-}
-
-private suspend fun loadImage(file: File, loadImagesContext: ExecutorCoroutineDispatcher): ImageBitmap {
-    return GalleryCacheStorage.getFromFastCache(file.toString()) ?: run {
-        val bufferedImage = GalleryCacheStorage.getFromFileCache(file.toString()) ?: run {
-            withContext(Dispatchers.IO) {
-                val bufferedImage = ImageIO.read(file)
-                val resized = withContext(loadImagesContext) {
-                    val resized = Scalr.resize(
-                        bufferedImage,
-                        Scalr.Method.SPEED,
-                        Scalr.Mode.AUTOMATIC,
-                        192 * 2,
-                        192 * 2
-                    )
-                    resized
-                }
-                GalleryCacheStorage.addToFileCache(file.toString(), resized)
-                resized
-            }
-        }
-        val imageInformation = ImageInformation.readImageInformation(file)
-        val thumbnail = ImageUtil.fixImageByExif(
-            bufferedImage,
-            imageInformation.copy(width = bufferedImage.width, height = bufferedImage.height),
-        )
-        val newImage = thumbnail.toComposeImageBitmap()
-        GalleryCacheStorage.addToFastCache(file.toString(), newImage)
-        newImage
     }
 }

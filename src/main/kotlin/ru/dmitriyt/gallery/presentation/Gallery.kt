@@ -33,7 +33,7 @@ import ru.dmitriyt.gallery.data.model.GalleryItem
 import ru.dmitriyt.gallery.data.model.GalleryViewType
 import ru.dmitriyt.gallery.data.model.LoadingState
 import ru.dmitriyt.gallery.data.model.PhotoWindowState
-import ru.dmitriyt.gallery.data.repository.PhotoRepository
+import ru.dmitriyt.gallery.data.repository.PhotoListRepository
 import ru.dmitriyt.gallery.presentation.photolist.PhotoList
 import ru.dmitriyt.gallery.presentation.photoview.PhotoWindow
 import ru.dmitriyt.gallery.presentation.resources.AppResources
@@ -184,8 +184,8 @@ private fun loadFiles(
     CoroutineScope(Dispatchers.Main).launch {
         onLoading()
         val listFiles = when (viewType) {
-            GalleryViewType.ALL -> PhotoRepository.getPhotosWithDateSort(directory)
-            GalleryViewType.FOLDERS -> PhotoRepository.getPhotoDirectories(currentDirectory)
+            GalleryViewType.ALL -> PhotoListRepository.getPhotosWithDateSort(directory)
+            GalleryViewType.FOLDERS -> PhotoListRepository.getPhotoDirectories(currentDirectory)
         }
         onSuccess(listFiles)
     }

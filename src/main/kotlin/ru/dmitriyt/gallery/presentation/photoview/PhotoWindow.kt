@@ -22,7 +22,6 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.ExperimentalComposeUiApi
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.ImageBitmap
-import androidx.compose.ui.graphics.toComposeImageBitmap
 import androidx.compose.ui.graphics.vector.rememberVectorPainter
 import androidx.compose.ui.input.key.Key
 import androidx.compose.ui.input.key.key
@@ -32,19 +31,15 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Window
 import androidx.compose.ui.window.WindowPlacement
 import androidx.compose.ui.window.rememberWindowState
-import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
-import kotlinx.coroutines.withContext
 import ru.dmitriyt.gallery.data.GalleryCacheStorage
 import ru.dmitriyt.gallery.data.model.LoadingState
 import ru.dmitriyt.gallery.data.model.PhotoWindowState
+import ru.dmitriyt.gallery.data.repository.PhotoRepository
 import ru.dmitriyt.gallery.presentation.resources.AppResources
-import ru.dmitriyt.gallery.presentation.util.ImageInformation
-import ru.dmitriyt.gallery.presentation.util.ImageUtil
 import java.io.File
-import javax.imageio.ImageIO
 
 private const val KEY_EVENT_DELAY = 200L
 
@@ -146,28 +141,12 @@ private fun ImageState(file: File): State<LoadingState<ImageBitmap>> {
     return produceState<LoadingState<ImageBitmap>>(initialValue = LoadingState.Loading(), file) {
         value = GalleryCacheStorage.getFromFastCache(file.toString())?.let { LoadingState.Success(it) } ?: LoadingState.Loading()
         value = try {
-            val image = loadImage(file)
+            val image = PhotoRepository.loadImage(file)
 
             LoadingState.Success(image)
         } catch (e: Exception) {
             e.printStackTrace()
             LoadingState.Error(file.toString())
-        }
-    }
-}
-
-private suspend fun loadImage(file: File): ImageBitmap {
-    return GalleryCacheStorage.getFromFastCacheFull(file.toString()) ?: run {
-        withContext(Dispatchers.IO) {
-            val bufferedImage = ImageIO.read(file)
-            val imageInformation = ImageInformation.readImageInformation(file)
-            val fixedOrientation = ImageUtil.fixImageByExif(
-                bufferedImage,
-                imageInformation.copy(width = bufferedImage.width, height = bufferedImage.height),
-            )
-            val image = fixedOrientation.toComposeImageBitmap()
-            GalleryCacheStorage.addToFastCacheFull(file.toString(), image)
-            image
         }
     }
 }
