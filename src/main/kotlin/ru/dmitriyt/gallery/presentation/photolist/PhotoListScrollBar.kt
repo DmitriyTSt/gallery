@@ -54,14 +54,11 @@ fun PhotoListScrollBar(
 
     LaunchedEffect(monthDividers) {
         monthDividersState = monthDividers
-//        monthDividers.forEach {
-//            println("month ${it.title} ${it.index} ${it.monthRowIndex}")
-//        }
     }
 
     Box(modifier = Modifier.fillMaxSize()) {
 
-        if (true) {
+        if (isUserScrolling) {
             Box(modifier = Modifier.fillMaxSize().background(Color.Black.copy(alpha = 0.5f)))
 
             Box(modifier = Modifier.fillMaxHeight().align(Alignment.TopEnd).padding(vertical = 24.dp)) {
