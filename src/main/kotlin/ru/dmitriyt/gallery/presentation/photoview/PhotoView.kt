@@ -6,6 +6,7 @@ import androidx.compose.foundation.gestures.detectDragGestures
 import androidx.compose.foundation.gestures.rememberScrollableState
 import androidx.compose.foundation.gestures.scrollable
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -32,6 +33,12 @@ fun PhotoView(modifier: Modifier = Modifier, image: ImageBitmap) {
     var offsetX by remember { mutableStateOf(0f) }
     var offsetY by remember { mutableStateOf(0f) }
     var photoSize by remember { mutableStateOf(IntSize(0, 0)) }
+
+    LaunchedEffect(image) {
+        scale = 1f
+        offsetX = 0f
+        offsetY = 0f
+    }
 
     Image(
         modifier = modifier
