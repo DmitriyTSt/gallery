@@ -47,6 +47,7 @@ fun PhotoListScrollBar(
     var size by remember { mutableStateOf(IntSize(0, 0)) }
     var elementHeight by remember { mutableStateOf(0f) }
     var monthDividersState by remember { mutableStateOf<List<MonthDividerInfo>>(emptyList()) }
+    var rowSizeState by remember { mutableStateOf(rowSize) }
     var isUserScrolling by remember { mutableStateOf(false) }
     var scrollingHoverMonthIndex by remember { mutableStateOf<Int?>(null) }
     val scrollCoroutineScope = rememberCoroutineScope()
@@ -54,6 +55,9 @@ fun PhotoListScrollBar(
 
     LaunchedEffect(monthDividers) {
         monthDividersState = monthDividers
+    }
+    LaunchedEffect(rowSize) {
+        rowSizeState = rowSize
     }
 
     Box(modifier = Modifier.fillMaxSize()) {
@@ -107,9 +111,9 @@ fun PhotoListScrollBar(
             val firstVisibleElementIndex = listState.layoutInfo.visibleItemsInfo.firstOrNull()?.index
             elementHeight = size.height.toFloat() / listState.layoutInfo.totalItemsCount
 
-            LaunchedEffect(firstVisibleElementIndex, elementHeight) {
+            LaunchedEffect(firstVisibleElementIndex, elementHeight, rowSizeState) {
                 if (firstVisibleElementIndex != null) {
-                    val firstVisibleElement = getItemIndexByRowIndex(monthDividersState, firstVisibleElementIndex, rowSize)
+                    val firstVisibleElement = getItemIndexByRowIndex(monthDividersState, firstVisibleElementIndex, rowSizeState)
                     offsetY = firstVisibleElement * elementHeight
                     scrollingHoverMonthIndex = getScrollingMonthIndex(monthDividersState, offsetY, elementHeight)
                 }
@@ -140,7 +144,7 @@ fun PhotoListScrollBar(
                             scrollJob = scrollCoroutineScope.launch {
                                 delay(100)
                                 val newElementIndex = (offsetY / elementHeight).roundToInt()
-                                val newRowIndex = getRowIndexByItemIndex(monthDividersState, newElementIndex, rowSize)
+                                val newRowIndex = getRowIndexByItemIndex(monthDividersState, newElementIndex, rowSizeState)
                                 listState.scrollToItem(newRowIndex)
                             }
                         }
