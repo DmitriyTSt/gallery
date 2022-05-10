@@ -34,6 +34,7 @@ import ru.dmitriyt.gallery.data.model.GalleryViewType
 import ru.dmitriyt.gallery.data.model.LoadingState
 import ru.dmitriyt.gallery.data.model.PhotoWindowState
 import ru.dmitriyt.gallery.data.repository.PhotoRepository
+import ru.dmitriyt.gallery.presentation.photolist.PhotoList
 import ru.dmitriyt.gallery.presentation.photoview.PhotoWindow
 import ru.dmitriyt.gallery.presentation.resources.AppResources
 import java.io.File
@@ -148,7 +149,7 @@ fun Gallery(directory: File, windowWidth: Dp, changeDirectory: (File) -> Unit) {
             when (stateListFiles.value) {
                 is LoadingState.Error -> Text(text = "Не удалось получить файлы", modifier = Modifier.align(Alignment.Center))
                 is LoadingState.Loading -> CircularProgressIndicator(modifier = Modifier.align(Alignment.Center))
-                is LoadingState.Success -> PhotosList(
+                is LoadingState.Success -> PhotoList(
                     scrollStates = scrollStates,
                     viewType = viewType.value,
                     key = when (viewType.value) {
