@@ -10,6 +10,8 @@ import androidx.compose.foundation.lazy.GridItemSpan
 import androidx.compose.foundation.lazy.LazyListState
 import androidx.compose.foundation.lazy.LazyVerticalGrid
 import androidx.compose.foundation.lazy.rememberLazyListState
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Place
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.MutableState
@@ -19,6 +21,8 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.vector.rememberVectorPainter
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import kotlinx.coroutines.CoroutineScope
@@ -32,6 +36,7 @@ import ru.dmitriyt.gallery.data.model.MonthDividerInfo
 import ru.dmitriyt.gallery.presentation.items.DirectoryItem
 import ru.dmitriyt.gallery.presentation.items.MonthItem
 import ru.dmitriyt.gallery.presentation.items.PhotoItem
+import ru.dmitriyt.gallery.presentation.resources.AppResources
 import java.io.File
 import kotlin.math.roundToInt
 
@@ -92,6 +97,8 @@ fun PhotoList(
         }
     }
 
+    val placeholder = painterResource(AppResources.icons.placeholder)
+
     Box {
         LazyVerticalGrid(
             state = state,
@@ -124,7 +131,7 @@ fun PhotoList(
                     when (item) {
                         is GalleryItem.Directory -> DirectoryItem(item.file, onChangeDirectory)
                         is GalleryItem.MonthDivider -> MonthItem(item.title)
-                        is GalleryItem.Photo -> PhotoItem(item.file, loadImagesContext) {
+                        is GalleryItem.Photo -> PhotoItem(item.file, loadImagesContext, placeholder) {
                             onPhotoClick(item.file, index, item.file.name)
                         }
                     }

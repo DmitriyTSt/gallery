@@ -7,7 +7,6 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
-import androidx.compose.material.CircularProgressIndicator
 import androidx.compose.material.Text
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Lock
@@ -17,6 +16,7 @@ import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.painter.Painter
 import androidx.compose.ui.graphics.vector.rememberVectorPainter
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.text.style.TextAlign
@@ -30,6 +30,7 @@ import java.io.File
 fun PhotoItem(
     photo: File,
     loadImagesContext: ExecutorCoroutineDispatcher,
+    placeholderVectorPainter: Painter,
     viewModel: PhotoItemViewModel = itemViewModels(photo.absolutePath),
     onImageClick: () -> Unit,
 ) {
@@ -53,7 +54,11 @@ fun PhotoItem(
                     textAlign = TextAlign.Center,
                 )
             }
-            is LoadingState.Loading -> CircularProgressIndicator(modifier = Modifier.align(Alignment.Center))
+            is LoadingState.Loading -> Image(
+                painter = placeholderVectorPainter,
+                contentDescription = "",
+                modifier = Modifier.align(Alignment.Center)
+            )
             is LoadingState.Success -> {
                 Image(
                     bitmap = (imageState as LoadingState.Success).data,
