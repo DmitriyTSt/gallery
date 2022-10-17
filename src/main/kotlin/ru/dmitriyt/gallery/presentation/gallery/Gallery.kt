@@ -1,4 +1,4 @@
-package ru.dmitriyt.gallery.presentation
+package ru.dmitriyt.gallery.presentation.gallery
 
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -16,7 +16,8 @@ import androidx.compose.material.icons.filled.DateRange
 import androidx.compose.material.icons.filled.List
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.runtime.MutableState
+import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
@@ -25,37 +26,29 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.rememberVectorPainter
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
-import kotlinx.coroutines.CoroutineScope
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.launch
-import ru.dmitriyt.gallery.data.Settings
 import ru.dmitriyt.gallery.data.model.GalleryItem
 import ru.dmitriyt.gallery.data.model.GalleryViewType
 import ru.dmitriyt.gallery.data.model.LoadingState
 import ru.dmitriyt.gallery.data.model.PhotoWindowState
-import ru.dmitriyt.gallery.data.repository.PhotoListRepository
+import ru.dmitriyt.gallery.presentation.DirectorySelectorButton
 import ru.dmitriyt.gallery.presentation.photolist.PhotoList
 import ru.dmitriyt.gallery.presentation.photoview.PhotoWindow
 import ru.dmitriyt.gallery.presentation.resources.AppResources
 import java.io.File
 
 @Composable
-fun Gallery(directory: File, windowWidth: Dp, changeDirectory: (File) -> Unit) {
-    val viewType = remember { mutableStateOf(Settings.galleryViewType) }
+fun Gallery(directory: File, windowWidth: Dp, viewModel: GalleryViewModel = viewModels(), changeDirectory: (File) -> Unit) {
+    val viewType by viewModel.viewType.collectAsState()
     val currentDirectory = remember { mutableStateOf(directory) }
-    val stateListFiles: MutableState<LoadingState<List<GalleryItem>>> = remember { mutableStateOf(LoadingState.Loading()) }
+    val stateListFiles by viewModel.listFiles.collectAsState()
     val scrollStates = remember { mutableStateOf(mutableMapOf<GalleryViewType, MutableMap<String, LazyListState>>()) }
     val photoWindow = remember { mutableStateOf<PhotoWindowState>(PhotoWindowState.Hidden) }
 
     LaunchedEffect(directory) {
         currentDirectory.value = directory
     }
-    LaunchedEffect(currentDirectory.value, viewType.value) {
-        loadFiles(viewType.value, currentDirectory.value, directory, onLoading = {
-            stateListFiles.value = LoadingState.Loading()
-        }) { items ->
-            stateListFiles.value = LoadingState.Success(items)
-        }
+    LaunchedEffect(currentDirectory.value, viewType) {
+        viewModel.loadFiles(viewType, currentDirectory.value, directory)
     }
 
     when (photoWindow.value) {
@@ -68,7 +61,7 @@ fun Gallery(directory: File, windowWidth: Dp, changeDirectory: (File) -> Unit) {
             onLeftClick = {
                 val state = photoWindow.value as PhotoWindowState.Shown
                 var index = state.index
-                (stateListFiles.value as? LoadingState.Success)?.data?.let { galleryItems ->
+                (stateListFiles as? LoadingState.Success)?.data?.let { galleryItems ->
                     do {
                         index--
                         if (index == -1) {
@@ -86,7 +79,7 @@ fun Gallery(directory: File, windowWidth: Dp, changeDirectory: (File) -> Unit) {
             onRightClick = {
                 val state = photoWindow.value as PhotoWindowState.Shown
                 var index = state.index
-                (stateListFiles.value as? LoadingState.Success)?.data?.let { galleryItems ->
+                (stateListFiles as? LoadingState.Success)?.data?.let { galleryItems ->
                     do {
                         index++
                         if (index == galleryItems.size) {
@@ -109,14 +102,14 @@ fun Gallery(directory: File, windowWidth: Dp, changeDirectory: (File) -> Unit) {
             backgroundColor = Color.White,
             contentColor = Color.Black,
         ) {
-            if (currentDirectory.value != directory && viewType.value == GalleryViewType.FOLDERS) {
+            if (currentDirectory.value != directory && viewType == GalleryViewType.FOLDERS) {
                 IconButton(onClick = {
                     currentDirectory.value = currentDirectory.value.parentFile
                 }) {
                     Icon(painter = rememberVectorPainter(Icons.Default.ArrowBack), contentDescription = null)
                 }
             }
-            val currentName = when (viewType.value) {
+            val currentName = when (viewType) {
                 GalleryViewType.ALL -> directory
                 GalleryViewType.FOLDERS -> currentDirectory.value
             }
@@ -125,12 +118,11 @@ fun Gallery(directory: File, windowWidth: Dp, changeDirectory: (File) -> Unit) {
                 modifier = Modifier.padding(16.dp).weight(1f)
             )
             IconButton(onClick = {
-                viewType.value = GalleryViewType.values().let { it[(viewType.value.ordinal + 1) % it.size] }
-                Settings.galleryViewType = viewType.value
+                viewModel.changeViewType()
             }) {
                 Icon(
                     painter = rememberVectorPainter(
-                        when (viewType.value) {
+                        when (viewType) {
                             GalleryViewType.ALL -> Icons.Default.DateRange
                             GalleryViewType.FOLDERS -> Icons.Default.List
                         }
@@ -146,17 +138,17 @@ fun Gallery(directory: File, windowWidth: Dp, changeDirectory: (File) -> Unit) {
             )
         }
         Box(modifier = Modifier.fillMaxSize()) {
-            when (stateListFiles.value) {
+            when (stateListFiles) {
                 is LoadingState.Error -> Text(text = "Не удалось получить файлы", modifier = Modifier.align(Alignment.Center))
                 is LoadingState.Loading -> CircularProgressIndicator(modifier = Modifier.align(Alignment.Center))
                 is LoadingState.Success -> PhotoList(
                     scrollStates = scrollStates,
-                    viewType = viewType.value,
-                    key = when (viewType.value) {
+                    viewType = viewType,
+                    key = when (viewType) {
                         GalleryViewType.ALL -> directory.toString()
                         GalleryViewType.FOLDERS -> currentDirectory.value.toString()
                     },
-                    files = (stateListFiles.value as LoadingState.Success).data,
+                    files = (stateListFiles as LoadingState.Success).data,
                     windowWidth = windowWidth,
                     onChangeDirectory = { newDirectory ->
                         currentDirectory.value = newDirectory
@@ -171,22 +163,5 @@ fun Gallery(directory: File, windowWidth: Dp, changeDirectory: (File) -> Unit) {
                 )
             }
         }
-    }
-}
-
-private fun loadFiles(
-    viewType: GalleryViewType,
-    currentDirectory: File,
-    directory: File,
-    onLoading: () -> Unit,
-    onSuccess: (List<GalleryItem>) -> Unit,
-) {
-    CoroutineScope(Dispatchers.Main).launch {
-        onLoading()
-        val listFiles = when (viewType) {
-            GalleryViewType.ALL -> PhotoListRepository.getPhotosWithDateSort(directory)
-            GalleryViewType.FOLDERS -> PhotoListRepository.getPhotoDirectories(currentDirectory)
-        }
-        onSuccess(listFiles)
     }
 }

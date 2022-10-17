@@ -16,7 +16,7 @@ import androidx.compose.ui.window.application
 import androidx.compose.ui.window.rememberWindowState
 import ru.dmitriyt.gallery.data.Settings
 import ru.dmitriyt.gallery.presentation.DirectorySelectorButton
-import ru.dmitriyt.gallery.presentation.Gallery
+import ru.dmitriyt.gallery.presentation.gallery.Gallery
 import ru.dmitriyt.gallery.presentation.resources.AppResources
 import java.io.File
 
