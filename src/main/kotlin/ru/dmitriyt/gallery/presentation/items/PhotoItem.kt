@@ -35,7 +35,7 @@ fun PhotoItem(
 ) {
     val imageState by viewModel.image.collectAsState()
 
-    LaunchedEffect(null) {
+    LaunchedEffect(photo) {
         viewModel.loadImage(photo, loadImagesContext)
     }
 
