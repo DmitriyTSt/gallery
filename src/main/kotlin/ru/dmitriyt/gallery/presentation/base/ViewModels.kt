@@ -1,7 +1,7 @@
 package ru.dmitriyt.gallery.presentation.base
 
 import ru.dmitriyt.gallery.presentation.gallery.GalleryViewModel
-import ru.dmitriyt.gallery.presentation.items.PhotoItemViewModel
+import ru.dmitriyt.gallery.presentation.photoview.PhotoWindowViewModel
 
 object ViewModelStorage {
 
@@ -28,6 +28,11 @@ inline fun <reified T : BaseViewModel> viewModels(hash: String? = null): T {
         GalleryViewModel::class.java -> {
             ViewModelStorage.getOrCreate(hash, GalleryViewModel::class.java) {
                 GalleryViewModel()
+            } as T
+        }
+        PhotoWindowViewModel::class.java -> {
+            ViewModelStorage.getOrCreate(hash, PhotoWindowViewModel::class.java) {
+                PhotoWindowViewModel()
             } as T
         }
         else -> throw IllegalStateException("Unknown viewModel ${T::class.java}")

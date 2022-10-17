@@ -13,8 +13,8 @@ import ru.dmitriyt.gallery.data.model.LoadingState
 abstract class BaseViewModel {
     protected val viewModelScope = CoroutineScope(Dispatchers.Main)
 
-    protected fun <T> executeFlow(block: suspend () -> T): Flow<LoadingState<T>> = flow {
-        emit(LoadingState.Loading())
+    protected fun <T> executeFlow(defaultValue: T? = null, block: suspend () -> T): Flow<LoadingState<T>> = flow {
+        emit(defaultValue?.let { LoadingState.Success(it) } ?: LoadingState.Loading())
         try {
             val data = block()
             emit(LoadingState.Success(data))

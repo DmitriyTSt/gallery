@@ -14,9 +14,9 @@ import androidx.compose.material.icons.filled.ArrowBack
 import androidx.compose.material.icons.filled.ArrowForward
 import androidx.compose.material.icons.filled.Warning
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.State
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.produceState
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.ExperimentalComposeUiApi
@@ -34,22 +34,31 @@ import androidx.compose.ui.window.rememberWindowState
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
-import ru.dmitriyt.gallery.data.GalleryCacheStorage
 import ru.dmitriyt.gallery.data.model.LoadingState
 import ru.dmitriyt.gallery.data.model.PhotoWindowState
-import ru.dmitriyt.gallery.data.repository.PhotoRepository
+import ru.dmitriyt.gallery.presentation.base.viewModels
 import ru.dmitriyt.gallery.presentation.resources.AppResources
-import java.io.File
 
 private const val KEY_EVENT_DELAY = 200L
 
 @OptIn(ExperimentalComposeUiApi::class)
 @Composable
-fun PhotoWindow(state: PhotoWindowState.Shown, onClose: () -> Unit, onLeftClick: () -> Unit, onRightClick: () -> Unit) {
+fun PhotoWindow(
+    state: PhotoWindowState.Shown,
+    onClose: () -> Unit,
+    onLeftClick: () -> Unit,
+    onRightClick: () -> Unit,
+    viewModel: PhotoWindowViewModel = viewModels(),
+) {
     val windowState = rememberWindowState(placement = WindowPlacement.Maximized)
-    val imageState by ImageState(state.file)
+    val imageState by viewModel.image.collectAsState()
     val coroutineScope = rememberCoroutineScope()
     var keyEventJob: Job? = null
+
+    LaunchedEffect(state.file) {
+        viewModel.loadImage(state.file)
+    }
+
     Window(
         title = state.name,
         state = windowState,
@@ -131,22 +140,6 @@ private fun ImageStateView(modifier: Modifier, imageState: LoadingState<ImageBit
                 modifier = modifier.fillMaxSize(),
                 image = imageState.data,
             )
-        }
-    }
-}
-
-
-@Composable
-private fun ImageState(file: File): State<LoadingState<ImageBitmap>> {
-    return produceState<LoadingState<ImageBitmap>>(initialValue = LoadingState.Loading(), file) {
-        value = GalleryCacheStorage.getFromFastCache(file.toString())?.let { LoadingState.Success(it) } ?: LoadingState.Loading()
-        value = try {
-            val image = PhotoRepository.loadImage(file)
-
-            LoadingState.Success(image)
-        } catch (e: Exception) {
-            e.printStackTrace()
-            LoadingState.Error(file.toString())
         }
     }
 }
