@@ -1,6 +1,7 @@
-package ru.dmitriyt.gallery.presentation.gallery
+package ru.dmitriyt.gallery.presentation.base
 
-import ru.dmitriyt.gallery.presentation.base.BaseViewModel
+import ru.dmitriyt.gallery.presentation.gallery.GalleryViewModel
+import ru.dmitriyt.gallery.presentation.items.PhotoItemViewModel
 
 object ViewModelStorage {
 

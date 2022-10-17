@@ -2,6 +2,7 @@ package ru.dmitriyt.gallery.presentation.base
 
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.cancel
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.collectLatest
@@ -18,6 +19,7 @@ abstract class BaseViewModel {
             val data = block()
             emit(LoadingState.Success(data))
         } catch (e: Exception) {
+            e.printStackTrace()
             emit(LoadingState.Error(e.message))
         }
     }
@@ -34,5 +36,9 @@ abstract class BaseViewModel {
                 destination.value = it
             }
         }
+    }
+
+    fun clear() {
+        viewModelScope.cancel()
     }
 }

@@ -12,24 +12,33 @@ import androidx.compose.material.Text
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Lock
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.State
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.produceState
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.ImageBitmap
 import androidx.compose.ui.graphics.vector.rememberVectorPainter
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import kotlinx.coroutines.ExecutorCoroutineDispatcher
 import ru.dmitriyt.gallery.data.model.LoadingState
-import ru.dmitriyt.gallery.data.repository.PhotoRepository
+import ru.dmitriyt.gallery.presentation.base.itemViewModels
 import java.io.File
 
 @Composable
-fun PhotoItem(photo: File, loadImagesContext: ExecutorCoroutineDispatcher, onImageClick: () -> Unit) {
-    val imageState by ImageState(photo, loadImagesContext)
+fun PhotoItem(
+    photo: File,
+    loadImagesContext: ExecutorCoroutineDispatcher,
+    viewModel: PhotoItemViewModel = itemViewModels(photo.absolutePath),
+    onImageClick: () -> Unit,
+) {
+    val imageState by viewModel.image.collectAsState()
+
+    LaunchedEffect(null) {
+        viewModel.loadImage(photo, loadImagesContext)
+    }
+
     Box(modifier = Modifier.aspectRatio(1f).fillMaxSize().padding(2.dp)) {
         when (imageState) {
             is LoadingState.Error -> Column(modifier = Modifier.align(Alignment.Center)) {
@@ -55,20 +64,6 @@ fun PhotoItem(photo: File, loadImagesContext: ExecutorCoroutineDispatcher, onIma
                     }
                 )
             }
-        }
-    }
-}
-
-@Composable
-private fun ImageState(file: File, loadImagesContext: ExecutorCoroutineDispatcher): State<LoadingState<ImageBitmap>> {
-    return produceState<LoadingState<ImageBitmap>>(initialValue = LoadingState.Loading(), file) {
-        value = try {
-            val image = PhotoRepository.loadImagePreview(file, loadImagesContext)
-
-            LoadingState.Success(image)
-        } catch (e: Exception) {
-            e.printStackTrace()
-            LoadingState.Error(file.toString())
         }
     }
 }

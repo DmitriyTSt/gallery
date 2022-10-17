@@ -31,6 +31,7 @@ import ru.dmitriyt.gallery.data.model.GalleryViewType
 import ru.dmitriyt.gallery.data.model.LoadingState
 import ru.dmitriyt.gallery.data.model.PhotoWindowState
 import ru.dmitriyt.gallery.presentation.DirectorySelectorButton
+import ru.dmitriyt.gallery.presentation.base.viewModels
 import ru.dmitriyt.gallery.presentation.photolist.PhotoList
 import ru.dmitriyt.gallery.presentation.photoview.PhotoWindow
 import ru.dmitriyt.gallery.presentation.resources.AppResources
@@ -39,8 +40,8 @@ import java.io.File
 @Composable
 fun Gallery(directory: File, windowWidth: Dp, viewModel: GalleryViewModel = viewModels(), changeDirectory: (File) -> Unit) {
     val viewType by viewModel.viewType.collectAsState()
-    val currentDirectory = remember { mutableStateOf(directory) }
     val stateListFiles by viewModel.listFiles.collectAsState()
+    val currentDirectory = remember { mutableStateOf(directory) }
     val scrollStates = remember { mutableStateOf(mutableMapOf<GalleryViewType, MutableMap<String, LazyListState>>()) }
     val photoWindow = remember { mutableStateOf<PhotoWindowState>(PhotoWindowState.Hidden) }
 
