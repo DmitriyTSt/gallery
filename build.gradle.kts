@@ -1,11 +1,10 @@
-import org.jetbrains.compose.compose
 import org.jetbrains.compose.desktop.application.dsl.TargetFormat
 import org.jetbrains.kotlin.gradle.tasks.KotlinCompile
 
 plugins {
-    kotlin("jvm") version "1.6.10"
-    id("org.jetbrains.compose") version "1.1.0"
-    kotlin("plugin.serialization") version "1.6.10"
+    kotlin("jvm") version "1.8.20"
+    id("org.jetbrains.compose") version "1.4.0"
+    kotlin("plugin.serialization") version "1.8.20"
 }
 
 group = "ru.dmitriyt"
@@ -20,8 +19,9 @@ repositories {
 dependencies {
     implementation(compose.desktop.currentOs)
     implementation("org.imgscalr:imgscalr-lib:4.2")
-    implementation("com.drewnoakes:metadata-extractor:2.16.0")
-    implementation("org.jetbrains.kotlinx:kotlinx-serialization-json:1.3.2")
+    implementation("com.drewnoakes:metadata-extractor:2.18.0")
+    implementation("org.jetbrains.kotlinx:kotlinx-serialization-json:1.5.0")
+    implementation("org.jetbrains.kotlinx:kotlinx-coroutines-swing:1.6.3")
 }
 
 tasks.withType<KotlinCompile>() {

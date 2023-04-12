@@ -1,17 +1,14 @@
 package ru.dmitriyt.gallery.presentation.photolist
 
-import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.lazy.GridCells
-import androidx.compose.foundation.lazy.GridItemSpan
-import androidx.compose.foundation.lazy.LazyListState
-import androidx.compose.foundation.lazy.LazyVerticalGrid
-import androidx.compose.foundation.lazy.rememberLazyListState
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Place
+import androidx.compose.foundation.lazy.grid.GridCells
+import androidx.compose.foundation.lazy.grid.GridItemSpan
+import androidx.compose.foundation.lazy.grid.LazyGridState
+import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
+import androidx.compose.foundation.lazy.grid.rememberLazyGridState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.MutableState
@@ -21,13 +18,13 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.vector.rememberVectorPainter
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
+import java.io.File
+import kotlin.math.roundToInt
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.ObsoleteCoroutinesApi
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.newFixedThreadPoolContext
 import ru.dmitriyt.gallery.data.model.GalleryItem
@@ -37,13 +34,10 @@ import ru.dmitriyt.gallery.presentation.items.DirectoryItem
 import ru.dmitriyt.gallery.presentation.items.MonthItem
 import ru.dmitriyt.gallery.presentation.items.PhotoItem
 import ru.dmitriyt.gallery.presentation.resources.AppResources
-import java.io.File
-import kotlin.math.roundToInt
 
-@OptIn(ExperimentalFoundationApi::class, ObsoleteCoroutinesApi::class)
 @Composable
 fun PhotoList(
-    scrollStates: MutableState<MutableMap<GalleryViewType, MutableMap<String, LazyListState>>>,
+    scrollStates: MutableState<MutableMap<GalleryViewType, MutableMap<String, LazyGridState>>>,
     viewType: GalleryViewType,
     key: String,
     files: List<GalleryItem>,
@@ -58,7 +52,7 @@ fun PhotoList(
         if (viewTypeState == null) {
             scrollStates.value[viewType] = mutableMapOf()
         }
-        val newState = rememberLazyListState()
+        val newState = rememberLazyGridState()
         scrollStates.value[viewType]?.set(key, newState)
         newState
     }
@@ -102,7 +96,7 @@ fun PhotoList(
     Box {
         LazyVerticalGrid(
             state = state,
-            cells = GridCells.Adaptive(minSize = cellMinSize)
+            columns = GridCells.Adaptive(minSize = cellMinSize)
         ) {
             var lastDividerIndex = -1
             files.forEachIndexed { index, item ->

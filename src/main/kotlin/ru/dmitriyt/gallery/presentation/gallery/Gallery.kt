@@ -4,7 +4,6 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.lazy.LazyListState
 import androidx.compose.material.CircularProgressIndicator
 import androidx.compose.material.Icon
 import androidx.compose.material.IconButton
@@ -13,6 +12,7 @@ import androidx.compose.material.TopAppBar
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ArrowBack
 import androidx.compose.material.icons.filled.DateRange
+import androidx.compose.foundation.lazy.grid.LazyGridState
 import androidx.compose.material.icons.filled.List
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -42,7 +42,7 @@ fun Gallery(directory: File, windowWidth: Dp, viewModel: GalleryViewModel = view
     val viewType by viewModel.viewType.collectAsState()
     val stateListFiles by viewModel.listFiles.collectAsState()
     val currentDirectory = remember { mutableStateOf(directory) }
-    val scrollStates = remember { mutableStateOf(mutableMapOf<GalleryViewType, MutableMap<String, LazyListState>>()) }
+    val scrollStates = remember { mutableStateOf(mutableMapOf<GalleryViewType, MutableMap<String, LazyGridState>>()) }
     val photoWindow = remember { mutableStateOf<PhotoWindowState>(PhotoWindowState.Hidden) }
 
     LaunchedEffect(directory) {
