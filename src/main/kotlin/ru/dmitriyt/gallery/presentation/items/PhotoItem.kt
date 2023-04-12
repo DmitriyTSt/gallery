@@ -21,10 +21,10 @@ import androidx.compose.ui.graphics.vector.rememberVectorPainter
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
+import java.io.File
 import kotlinx.coroutines.ExecutorCoroutineDispatcher
 import ru.dmitriyt.gallery.data.model.LoadingState
 import ru.dmitriyt.gallery.presentation.base.itemViewModels
-import java.io.File
 
 @Composable
 fun PhotoItem(
@@ -60,14 +60,16 @@ fun PhotoItem(
                 modifier = Modifier.align(Alignment.Center)
             )
             is LoadingState.Success -> {
-                Image(
-                    bitmap = (imageState as LoadingState.Success).data,
-                    contentScale = ContentScale.Crop,
-                    contentDescription = null,
-                    modifier = Modifier.clickable {
-                        onImageClick()
-                    }
-                )
+                Box(modifier = Modifier.fillMaxSize().clickable {
+                    onImageClick()
+                }) {
+                    Image(
+                        bitmap = (imageState as LoadingState.Success).data,
+                        contentScale = ContentScale.Crop,
+                        contentDescription = null,
+                        modifier = Modifier.align(Alignment.Center),
+                    )
+                }
             }
         }
     }
