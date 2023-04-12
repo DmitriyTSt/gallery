@@ -1,13 +1,13 @@
 package ru.dmitriyt.gallery.data
 
 import androidx.compose.ui.graphics.ImageBitmap
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.withContext
 import java.awt.image.BufferedImage
 import java.io.File
 import java.util.Base64
 import java.util.LinkedList
 import javax.imageio.ImageIO
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
 
 object GalleryCacheStorage {
     private const val CACHE_SIZE = 100
@@ -16,8 +16,6 @@ object GalleryCacheStorage {
     private val cacheFullMap = mutableMapOf<String, ImageBitmap>()
     private val keys = LinkedList<String>()
     private val keysFull = LinkedList<String>()
-
-    private const val CACHE_DIR = ".gallery_cache"
 
     @Synchronized
     fun addToFastCache(key: String, image: ImageBitmap) {
@@ -51,12 +49,7 @@ object GalleryCacheStorage {
 
     suspend fun addToFileCache(key: String, image: BufferedImage) = withContext(Dispatchers.IO) {
         val base64key = Base64.getEncoder().encodeToString(key.toByteArray(Charsets.UTF_8)).takeLast(15) + ".jpg"
-        File(CACHE_DIR).apply {
-            if (!exists()) {
-                mkdir()
-            }
-        }
-        val imageFile = File(CACHE_DIR, base64key).apply {
+        val imageFile = File(Settings.cacheDir, base64key).apply {
             if (!exists()) {
                 createNewFile()
             }
@@ -66,7 +59,7 @@ object GalleryCacheStorage {
 
     suspend fun getFromFileCache(key: String): BufferedImage? = withContext(Dispatchers.IO) {
         val base64key = Base64.getEncoder().encodeToString(key.toByteArray(Charsets.UTF_8)).takeLast(15) + ".jpg"
-        val file = File(CACHE_DIR, base64key)
+        val file = File(Settings.cacheDir, base64key)
         if (file.exists()) {
             ImageIO.read(file)
         } else {

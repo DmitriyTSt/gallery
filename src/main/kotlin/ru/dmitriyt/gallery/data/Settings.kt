@@ -1,13 +1,31 @@
 package ru.dmitriyt.gallery.data
 
+import java.io.File
 import kotlinx.serialization.decodeFromString
 import kotlinx.serialization.encodeToString
 import kotlinx.serialization.json.Json
 import ru.dmitriyt.gallery.data.model.GalleryViewType
 import ru.dmitriyt.gallery.data.model.SettingsData
-import java.io.File
 
 object Settings {
+    private const val CACHE_DIR = ".gallery_cache"
+
+    private val appDir by lazy {
+        File(System.getProperty("user.home"), ".Gallery").apply {
+            if (!exists()) {
+                mkdir()
+            }
+        }
+    }
+
+    val cacheDir by lazy {
+        File(appDir, CACHE_DIR).apply {
+            if (!exists()) {
+                mkdir()
+            }
+        }
+    }
+
     private val settingsFile = getOrCreatePreferencesFile()
 
     private var settings: SettingsData
@@ -29,7 +47,7 @@ object Settings {
         }
 
     private fun getOrCreatePreferencesFile(): File {
-        return File("settings.json").apply {
+        return File(appDir, "settings.json").apply {
             if (!exists()) {
                 createNewFile()
                 writeText("{}")

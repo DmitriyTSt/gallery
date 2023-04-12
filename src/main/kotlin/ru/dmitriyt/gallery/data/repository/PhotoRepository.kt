@@ -2,6 +2,8 @@ package ru.dmitriyt.gallery.data.repository
 
 import androidx.compose.ui.graphics.ImageBitmap
 import androidx.compose.ui.graphics.toComposeImageBitmap
+import java.io.File
+import javax.imageio.ImageIO
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExecutorCoroutineDispatcher
 import kotlinx.coroutines.withContext
@@ -9,8 +11,6 @@ import org.imgscalr.Scalr
 import ru.dmitriyt.gallery.data.GalleryCacheStorage
 import ru.dmitriyt.gallery.presentation.util.ImageInformation
 import ru.dmitriyt.gallery.presentation.util.ImageUtil
-import java.io.File
-import javax.imageio.ImageIO
 
 object PhotoRepository {
 
